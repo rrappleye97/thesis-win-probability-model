@@ -1,0 +1,235 @@
+---
+
+title: "dvoa-scraping"
+author: "Rob Rappleye"
+date: "1/10/2019"
+output: html_document
+---
+
+#get efficiency ratings (read in pages)
+```{r}
+library(rvest)
+dvoa.nth.child = c("td", "td", 25, 28, 17, 15, 27, 26, "p+ .stats td", "p+ .stats td", 
+  "p+ .stats td", 20, 15, 14, "p+ .stats td", "p+ .stats td",
+  "td", "td", 28, 21, 21, 22, 22, 13, 27, 21, 20, 27, 33, 21, 21, "p+ .stats td",
+  "td", 24, "td", 26, 26, 30, 24, 23, 25, 22, 26, 24, 27, 33, 31, 40,
+  ".stats td", ".stats td", 29, 45, 37, 36, 30, 44, 43, 29, 31, 32, 38, 42, 32, 28,
+  ".stats td", 36, ".stats td", 39, 26, 30, 32, 35, 28, 37, 39, 29, 28, 35, 27, 40,
+  ".stats td", 37, 38, 35, 40, 52, 40, 42, 29, 47, 32, 38, 36, 22, 40, 32,
+  ".stats td", "p+ .stats td", 35, 34, 30, 26, 34, 46, 36, 28, 42, 38, ".editor+ .stats td",
+  32, 37, 33,
+  34, 35, 37, 35, 37, 37, 45, 45, 38, 38, 32, 36, 46, 49, 31, 33)
+
+#2017 pre-week 2 missing
+dvoa.pages = as.list(rep(NA, 128))
+dvoa.tables = as.list(rep(NA, length(dvoa.pages)+8))
+for(i in c(1:length(dvoa.pages))){
+  week = ifelse(i %% 16 == 0, 16, i %% 16)
+  season = floor((i-1)/16)+2010
+  url = paste0("https://www.footballoutsiders.com/dvoa-ratings/", season, "/week-", week,
+    "-dvoa-ratings")
+  dvoa.pages[[i]] = read_html(url)
+}
+```
+
+#get efficiency ratings (create list of tables)
+```{r}
+for(i in c(1:length(dvoa.pages))) {
+  print(i)
+  indices = seq(15, 431, by = 13)
+  if(i %% 16 == 1){
+    indices = seq(14, 398, 12)
+  }
+  page = dvoa.pages[[i]]
+  test = NA
+  if(str_detect(dvoa.nth.child[i], "\\d\\d")){
+    test = page %>% html_nodes(paste0(".stats:nth-child(" , dvoa.nth.child[i] ,") td"))
+  } else{
+    test = page %>% html_nodes(dvoa.nth.child[i])
+  }
+  
+  k = ifelse(i %% 16 == 1, 5, 6)  
+  teams = as.character(test[indices])
+  o.dvoa = as.character(test[indices + k])
+  d.dvoa = as.character(test[indices + k + 2])
+  st.dvoa = as.character(test[indices + k + 4])
+  games = as.character(test[indices + k - 1])
+  
+  #get negative dvoas
+  o.dvoa.neg = str_detect(o.dvoa, "-")
+  d.dvoa.neg = str_detect(d.dvoa, "-")
+  st.dvoa.neg = str_detect(st.dvoa, "-")
+  
+  teams = str_extract(teams, "[:upper:]+")
+  o.dvoa = str_extract(o.dvoa, "\\d+.\\d") %>% as.numeric()
+  d.dvoa = str_extract(d.dvoa, "\\d+.\\d") %>% as.numeric()
+  st.dvoa = str_extract(st.dvoa, "\\d+.\\d") %>% as.numeric()
+  games = str_extract_all(games, "[0-9]+") 
+  if(i != 90 & i != 96){
+    for(j in c(1:33)){
+      games[[j]] = sum(as.numeric(games[[j]]))
+    }
+    games = unlist(games)
+  }
+  
+  
+  o.dvoa = ifelse(o.dvoa.neg,-1 * o.dvoa, o.dvoa)
+  d.dvoa = ifelse(d.dvoa.neg,-1 * d.dvoa, d.dvoa)
+  st.dvoa = ifelse(st.dvoa.neg,-1 * st.dvoa, st.dvoa)
+  
+  dvoa.tables[[i]] = data.frame(
+  "teams" = teams,
+  "o.dvoa" = as.numeric(o.dvoa),
+  "d.dvoa" = as.numeric(d.dvoa),
+  "st.dvoa" = as.numeric(st.dvoa),
+  "games" = games
+  )
+}
+
+#currently no result for 90 and 96
+for (i in seq(1, 128, by=1)){
+  if(nrow(dvoa.tables[[i]]) == 0){
+    print(i)
+  }
+}
+```
+
+
+#get team efficiency for week 10, 2015
+```{r}
+
+page = read_html("https://web.archive.org/web/20151118202921/footballoutsiders.com/stats/teameff")
+test = page %>% html_nodes("p+ .stats td")
+indices = seq(15, 431, by=13)
+teams = as.character(test[indices])
+o.dvoa = as.character(test[indices+6])
+d.dvoa = as.character(test[indices+8])
+st.dvoa = as.character(test[indices+10])
+games = as.character(test[indices+5])
+
+#get negative dvoas
+o.dvoa.neg = str_detect(o.dvoa, "-")
+d.dvoa.neg = str_detect(d.dvoa, "-")
+st.dvoa.neg = str_detect(st.dvoa, "-")
+
+teams = str_extract(teams, "[:upper:]+")
+o.dvoa = str_extract(o.dvoa, "\\d+.\\d") %>% as.numeric()
+d.dvoa = str_extract(d.dvoa, "\\d+.\\d") %>% as.numeric()
+st.dvoa = str_extract(st.dvoa, "\\d+.\\d") %>% as.numeric()
+games = str_extract_all(games, "[0-9]+") 
+if(i != 90 & i != 96){
+  for(j in c(1:33)){
+    games[[j]] = sum(as.numeric(games[[j]]))
+  }
+  games = unlist(games)
+}
+
+o.dvoa = ifelse(o.dvoa.neg, -1*o.dvoa, o.dvoa)
+d.dvoa = ifelse(d.dvoa.neg, -1*d.dvoa, d.dvoa)
+st.dvoa = ifelse(st.dvoa.neg, -1*st.dvoa, st.dvoa)
+
+dvoa.tables[[90]] = data.frame("teams" = teams, "o.dvoa" = o.dvoa, "d.dvoa" = d.dvoa, 
+  "st.dvoa" = st.dvoa, "games" = games)
+
+dvoa.tables[[96]] = read.csv("2015-week-16-dvoa.csv", header=F)
+colnames(dvoa.tables[[96]]) = c("teams", "o.dvoa", "d.dvoa", "st.dvoa")
+dvoa.tables[[96]]$teams = str_replace(dvoa.tables[[96]]$teams, "%", "")
+dvoa.tables[[96]]$o.dvoa = str_replace(dvoa.tables[[96]]$o.dvoa, "%", "")
+dvoa.tables[[96]]$d.dvoa = str_replace(dvoa.tables[[96]]$d.dvoa, "%", "")
+dvoa.tables[[96]]$st.dvoa = str_replace(dvoa.tables[[96]]$st.dvoa, "%", "")
+dvoa.tables[[96]]$games = 15
+```
+
+```{r}
+dvoa.tables = as.list(dvoa.tables, rep(NA, 8))
+for(i in c(0:7)){
+  j = i+129
+  season = paste0("201", i)
+  url = paste0("https://www.footballoutsiders.com/dvoa-ratings/", season, "/",
+    season, "-dvoa-projections")
+  page = read_html(url)
+  test = page %>% html_nodes("td")
+  print(i)
+  indices = ifelse(rep(i, 33) == 0, seq(13, 397, by = 12), 
+    ifelse(rep(i, 33) == 1, seq(14, 430, by = 13), 
+    ifelse(rep(i, 33) >= 2 & i < 4, seq(15, 463, by = 14), 
+    ifelse(rep(i, 33) == 5, seq(35, 515, by = 15), 
+    ifelse(rep(i, 33) == 6, seq(17, 497, by = 15), seq(16, 496, by = 15))))))
+  k = ifelse(i == 1, 5, 4)
+  teams = as.character(test[indices])
+  o.dvoa = as.character(test[indices+k])
+  d.dvoa = as.character(test[indices+k+2])
+  st.dvoa = as.character(test[indices+k+4])
+
+  #get negative dvoas
+  o.dvoa.neg = str_detect(o.dvoa, "([:space:]|>)-")
+  d.dvoa.neg = str_detect(d.dvoa, ">-")
+  st.dvoa.neg = str_detect(st.dvoa, ">-")
+
+  teams = str_extract(teams, "[:upper:]+([:space:]|<)") %>% str_extract("[:upper:]+")
+  o.dvoa = str_extract(o.dvoa, "\\d+.\\d%") %>% str_extract("\\d+.\\d") %>% as.numeric()
+  d.dvoa = str_extract(d.dvoa, "\\d+.\\d%") %>% str_extract("\\d+.\\d") %>% as.numeric()
+  st.dvoa = str_extract(st.dvoa, "\\d+.\\d%") %>% str_extract("\\d+.\\d") %>% as.numeric()
+
+  o.dvoa = ifelse(o.dvoa.neg, -1*o.dvoa, o.dvoa)
+  d.dvoa = ifelse(d.dvoa.neg, -1*d.dvoa, d.dvoa)
+  st.dvoa = ifelse(st.dvoa.neg, -1*st.dvoa, st.dvoa)
+
+  dvoa.tables[[j]] = data.frame("teams" = teams, "o.dvoa" = as.numeric(o.dvoa), 
+    "d.dvoa" = as.numeric(d.dvoa),  "st.dvoa" = as.numeric(st.dvoa))
+}
+
+for (i in c(1:136)){
+  dvoa.tables[[i]]$teams = as.character(dvoa.tables[[i]]$teams, stringsAsFactors=F)
+  dvoa.tables[[i]]$o.dvoa = as.character(dvoa.tables[[i]]$o.dvoa, stringsAsFactors=F)
+  dvoa.tables[[i]]$d.dvoa = as.character(dvoa.tables[[i]]$d.dvoa, stringsAsFactors=F)
+  dvoa.tables[[i]]$st.dvoa = as.character(dvoa.tables[[i]]$st.dvoa, stringsAsFactors=F)
+  dvoa.tables[[i]]$teams[which(dvoa.tables[[i]]$teams == "LARM")] = "LA"
+  dvoa.tables[[i]]$teams[which(dvoa.tables[[i]]$teams == "LACH")] = "LAC"
+  dvoa.tables[[i]]$teams[which(dvoa.tables[[i]]$teams == "JAC")] = "JAX"
+  #dvoa.tables[[i]] = dvoa.tables[[i]][-which(is.na(dvoa.tables[[i]]$teams)),]
+}
+
+
+#add priors
+prior.games = 4
+
+for(i in c(1:128)){
+  j = 128+ceiling(i/16)
+  for(k in c(1:33)){
+    team = dvoa.tables[[i]]$teams[k]
+    team.index = which(dvoa.tables[[j]]$teams == team)
+    prior.d.dvoa = dvoa.tables[[j]]$d.dvoa[team.index] %>% as.numeric()
+    prior.o.dvoa = dvoa.tables[[j]]$o.dvoa[team.index] %>% as.numeric()
+    prior.st.dvoa = dvoa.tables[[j]]$st.dvoa[team.index] %>% as.numeric()
+    games.played = dvoa.tables[[i]]$games[team.index]
+    if(length(team) == 0){
+      print(i)
+      print(k)
+    }
+    if(length(team) > 0){
+      dvoa.tables[[i]]$d.dvoa[k] = ((as.numeric(dvoa.tables[[i]]$d.dvoa[k]) * 
+       games.played) + (prior.d.dvoa*prior.games)) / (games.played+prior.games)
+      dvoa.tables[[i]]$o.dvoa[k] = ((as.numeric(dvoa.tables[[i]]$o.dvoa[k])* 
+        games.played) + (prior.o.dvoa*prior.games)) / (games.played+prior.games)
+      dvoa.tables[[i]]$st.dvoa[k] = ((as.numeric(dvoa.tables[[i]]$st.dvoa[k]) * 
+        games.played) + (prior.st.dvoa*prior.games)) / (games.played+prior.games)
+    }
+  }
+}
+
+for(i in c(1:128)){
+  for(j in c(1:16, 18:33))
+  if(is.na(dvoa.tables[[i]]$o.dvoa[j]) | is.na(dvoa.tables[[i]]$d.dvoa[j]) |
+     is.na(dvoa.tables[[i]]$st.dvoa[j])){
+    print(i)
+    print(j)
+     }
+}
+```
+
+
+```{r}
+save(dvoa.tables, file="dvoa-tables-new.rda")
+```
+

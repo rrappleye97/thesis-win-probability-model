@@ -1,0 +1,934 @@
+---
+title: "QB-grades"
+author: "Rob Rappleye"
+date: "1/23/2019"
+output: html_document
+---
+```{r}
+suppressWarnings(suppressMessages(library(rvest)))
+suppressWarnings(suppressMessages(library(purrr)))
+suppressWarnings(suppressMessages(library(magrittr)))
+suppressWarnings(suppressMessages(library(dplyr)))
+suppressWarnings(suppressMessages(library('fs')))
+suppressWarnings(suppressMessages(library('stringr')))
+suppressWarnings(suppressMessages(library('lubridate')))
+
+base_url = "https://www.pro-football-reference.com/years/2018/passing.htm"
+base_url1 = "https://www.pro-football-reference.com/years/2017/passing.htm"
+base_url2 = "https://www.pro-football-reference.com/years/2016/passing.htm"
+base_url3 = "https://www.pro-football-reference.com/years/2015/passing.htm"
+base_url4 = "https://www.pro-football-reference.com/years/2014/passing.htm"
+base_url5 = "https://www.pro-football-reference.com/years/2013/passing.htm"
+base_url6 = "https://www.pro-football-reference.com/years/2012/passing.htm"
+base_url7 = "https://www.pro-football-reference.com/years/2011/passing.htm"
+base_url8 = "https://www.pro-football-reference.com/years/2010/passing.htm"
+
+page = read_html(base_url)
+page1 = read_html(base_url1)
+page2 = read_html(base_url2)
+page3 = read_html(base_url3)
+page4 = read_html(base_url4)
+page5 = read_html(base_url5)
+page6 = read_html(base_url6)
+page7 = read_html(base_url7)
+page8 = read_html(base_url8)
+
+base_url = "https://www.pro-football-reference.com"
+
+#get links to the page for each state
+qbs1 = page %>%
+  html_nodes(".right+ .left a") %>%
+  html_attr("href")
+
+qbs2 = page1 %>%
+  html_nodes(".right+ .left a") %>%
+  html_attr("href")
+
+qbs3 = page2 %>%
+  html_nodes(".right+ .left a") %>%
+  html_attr("href")
+
+qbs4 = page3 %>%
+  html_nodes(".right+ .left a") %>%
+  html_attr("href")
+
+qbs5 = page4 %>%
+  html_nodes(".right+ .left a") %>%
+  html_attr("href")
+
+qbs6 = page5 %>%
+  html_nodes(".right+ .left a") %>%
+  html_attr("href")
+
+qbs7 = page6 %>%
+  html_nodes(".right+ .left a") %>%
+  html_attr("href")
+
+qbs8 = page7 %>%
+  html_nodes(".right+ .left a") %>%
+  html_attr("href")
+
+qbs9 = page8 %>%
+  html_nodes(".right+ .left a") %>%
+  html_attr("href")
+
+pages = as.list(c(1:length(qbs1)))
+for (i in c(1:length(qbs1))){
+  pages[[i]] = read_html(paste0(base_url, qbs1[i]))
+}
+pages1 = as.list(c(1:length(qbs2)))
+for (i in c(1:length(qbs2))){
+  pages1[[i]] = read_html(paste0(base_url, qbs2[i]))
+}
+
+pages2 = as.list(c(1:length(qbs3)))
+for (i in c(1:length(qbs3))){
+  pages2[[i]] = read_html(paste0(base_url, qbs3[i]))
+}
+pages3 = as.list(c(1:length(qbs4)))
+for (i in c(1:length(qbs4))){
+  pages3[[i]] = read_html(paste0(base_url, qbs4[i]))
+}
+
+pages4 = as.list(c(1:length(qbs5)))
+for (i in c(1:length(qbs5))){
+  pages4[[i]] = read_html(paste0(base_url, qbs5[i]))
+}
+pages5 = as.list(c(1:length(qbs6)))
+for (i in c(1:length(qbs6))){
+  pages5[[i]] = read_html(paste0(base_url, qbs6[i]))
+}
+
+pages6 = as.list(c(1:length(qbs7)))
+for (i in c(1:length(qbs7))){
+  pages6[[i]] = read_html(paste0(base_url, qbs7[i]))
+}
+pages7 = as.list(c(1:length(qbs8)))
+for (i in c(1:length(qbs8))){
+  pages7[[i]] = read_html(paste0(base_url, qbs8[i]))
+}
+
+pages8 = as.list(c(1:length(qbs9)))
+for (i in c(1:length(qbs9))){
+  pages8[[i]] = read_html(paste0(base_url, qbs9[i]))
+}
+odd <- function(x) x%%2 != 0 
+```
+
+
+```{r}
+make.pfr.df = function(qbs, pages){
+  qb.name = rep(NA, length(qbs))
+  qb.draft = qb.name
+  qb.age = qb.name
+  
+  qb.attempts.2018 = rep(NA, length(qbs))
+  qb.attempts.2017 = qb.attempts.2018
+  qb.attempts.2016 = qb.attempts.2018
+  qb.attempts.2015 = qb.attempts.2018
+  qb.attempts.2014 = qb.attempts.2018
+  qb.attempts.2013 = qb.attempts.2018
+  qb.attempts.2012 = qb.attempts.2018
+  qb.attempts.2011 = qb.attempts.2018
+  qb.attempts.2010 = qb.attempts.2018
+  qb.attempts.2009 = qb.attempts.2018
+  qb.attempts.2008 = qb.attempts.2018
+  qb.attempts.2007 = qb.attempts.2018
+  qb.attempts.2006 = qb.attempts.2018
+  
+  qbr.2018 = qb.attempts.2018
+  qbr.2017 = qb.attempts.2018
+  qbr.2016 = qb.attempts.2018
+  qbr.2015 = qb.attempts.2018
+  qbr.2014 = qb.attempts.2018
+  qbr.2013 = qb.attempts.2018
+  qbr.2012 = qb.attempts.2018
+  qbr.2011 = qb.attempts.2018
+  qbr.2010 = qb.attempts.2018
+  qbr.2009 = qb.attempts.2018
+  qbr.2008 = qb.attempts.2018
+  qbr.2007 = qb.attempts.2018
+  qbr.2006 = qb.attempts.2018
+  
+  anya.2018 = qb.attempts.2018
+  anya.2017 = qb.attempts.2018
+  anya.2016 = qb.attempts.2018
+  anya.2015 = qb.attempts.2018
+  anya.2014 = qb.attempts.2018
+  anya.2013 = qb.attempts.2018
+  anya.2012 = qb.attempts.2018
+  anya.2011 = qb.attempts.2018
+  anya.2010 = qb.attempts.2018
+  anya.2009 = qb.attempts.2018
+  anya.2008 = qb.attempts.2018
+  anya.2007 = qb.attempts.2018
+  anya.2006 = qb.attempts.2018
+  
+  for (i in c(1:length(qbs))){
+    new.page = pages[[i]]
+    pos = new.page %>% html_nodes("#meta p:nth-child(3)") %>% as.character()
+    print(qbs[i])
+      draft = new.page %>% html_nodes("p:nth-child(10)") %>% as.character()
+      draft.pos = NA
+      if(length(draft) > 0) {
+        if(str_detect(draft, "Draft")){
+        start = str_locate_all(draft, "\\(")[[1]][1]
+        end = str_locate_all(draft, "\\)")[[1]][1]
+        draft.pos = substr(draft, start, end)
+        draft.pos = str_extract_all(draft.pos, "\\d+")[[1]][1] %>% as.numeric()
+        }
+      }
+      name = new.page %>% html_nodes("h1") %>% as.character()
+      start = str_locate(name, "\\>")[[1]][1] + 1
+      end = str_locate(substr(name,start,nchar(name)), "\\<")[[1]][1] + start - 2
+      name = substr(name, start, end)
+      
+      age = new.page %>% html_nodes("p:nth-child(6)") %>% as.character()
+      #print(name)
+      #print(age[1])
+      age = str_match(age[1], "\\d\\d\\d\\d-\\d\\d-\\d\\d") %>% ymd()
+      #print(age)
+      age = as.numeric(ymd("2017-09-01") - age)/365.25
+      
+      years = new.page %>% html_nodes("#passing .full_table th") %>% as.character()
+      years = str_extract_all(years, "\\d\\d\\d\\d") %>% unlist() %>% as.numeric() %>%
+        unique()
+      
+      attempts = new.page %>% html_nodes("#passing .full_table .right:nth-child(10)") %>% as.character()
+      attempts = str_extract(attempts, "\\d+") %>% unlist() %>% as.numeric()
+      
+      qbr = new.page %>% html_nodes("#passing .full_table .right:nth-child(23)") %>% as.character()
+      qbr = str_extract(qbr, "\\d+.\\d") %>% unlist() %>% as.numeric()
+      
+      anya = new.page %>%  html_nodes("#passing .full_table .right:nth-child(27)") %>% as.character()
+      anya = str_extract(anya, "\\d+.\\d+") %>% unlist() %>% as.numeric()
+      
+      qb.name[i] = name
+      qb.draft[i] = draft.pos
+      qb.age[i] = age
+      
+      qb.attempts.2018[i] = 
+        ifelse(length(which(years == 2018))==0, 0, attempts[which(years==2018)])
+      qb.attempts.2017[i] = 
+        ifelse(length(which(years == 2017))==0, 0, attempts[which(years==2017)])
+      qb.attempts.2016[i] = 
+        ifelse(length(which(years == 2016))==0, 0, attempts[which(years==2016)])
+      qb.attempts.2015[i] = 
+        ifelse(length(which(years == 2015))==0, 0, attempts[which(years==2015)])
+      qb.attempts.2014[i] = 
+        ifelse(length(which(years == 2014))==0, 0, attempts[which(years==2014)])
+      qb.attempts.2013[i] = 
+        ifelse(length(which(years == 2013))==0, 0, attempts[which(years==2013)])
+      qb.attempts.2012[i] = 
+        ifelse(length(which(years == 2012))==0, 0, attempts[which(years==2012)])
+      qb.attempts.2011[i] = 
+        ifelse(length(which(years == 2011))==0, 0, attempts[which(years==2011)])
+      qb.attempts.2010[i] = 
+        ifelse(length(which(years == 2010))==0, 0, attempts[which(years==2010)])
+      qb.attempts.2009[i] = 
+        ifelse(length(which(years == 2009))==0, 0, attempts[which(years==2009)])
+      qb.attempts.2008[i] = 
+        ifelse(length(which(years == 2008))==0, 0, attempts[which(years==2008)])
+      qb.attempts.2007[i] = 
+        ifelse(length(which(years == 2007))==0, 0, attempts[which(years==2007)])
+      qb.attempts.2006[i] = 
+        ifelse(length(which(years == 2006))==0, 0, attempts[which(years==2006)])
+      
+      qbr.2018[i] = 
+        ifelse(length(which(years == 2018))==0, 0, qbr[which(years==2018)])
+      qbr.2017[i] = 
+        ifelse(length(which(years == 2017))==0, 0, qbr[which(years==2017)])
+      qbr.2016[i] = 
+        ifelse(length(which(years == 2016))==0, 0, qbr[which(years==2016)])
+      qbr.2015[i] = 
+        ifelse(length(which(years == 2015))==0, 0, qbr[which(years==2015)])
+      qbr.2014[i] = 
+        ifelse(length(which(years == 2014))==0, 0, qbr[which(years==2014)])
+      qbr.2013[i] = 
+        ifelse(length(which(years == 2013))==0, 0, qbr[which(years==2013)])
+      qbr.2012[i] = 
+        ifelse(length(which(years == 2012))==0, 0, qbr[which(years==2012)])
+      qbr.2011[i] = 
+        ifelse(length(which(years == 2011))==0, 0, qbr[which(years==2011)])
+      qbr.2010[i] = 
+        ifelse(length(which(years == 2010))==0, 0, qbr[which(years==2010)])
+      qbr.2009[i] = 
+        ifelse(length(which(years == 2009))==0, 0, qbr[which(years==2009)])
+      qbr.2008[i] = 
+        ifelse(length(which(years == 2008))==0, 0, qbr[which(years==2008)])
+      qbr.2007[i] = 
+        ifelse(length(which(years == 2007))==0, 0, qbr[which(years==2007)])
+      qbr.2006[i] = 
+        ifelse(length(which(years == 2006))==0, 0, qbr[which(years==2006)])
+      
+      anya.2018[i] = 
+        ifelse(length(which(years == 2018))==0, 0, anya[which(years==2018)])
+      anya.2017[i] = 
+        ifelse(length(which(years == 2017))==0, 0, anya[which(years==2017)])
+      anya.2016[i] = 
+        ifelse(length(which(years == 2016))==0, 0, anya[which(years==2016)])
+      anya.2015[i] = 
+        ifelse(length(which(years == 2015))==0, 0, anya[which(years==2015)])
+      anya.2014[i] = 
+        ifelse(length(which(years == 2014))==0, 0, anya[which(years==2014)])
+      anya.2013[i] = 
+        ifelse(length(which(years == 2013))==0, 0, anya[which(years==2013)])
+      anya.2012[i] = 
+        ifelse(length(which(years == 2012))==0, 0, anya[which(years==2012)])
+      anya.2011[i] = 
+        ifelse(length(which(years == 2011))==0, 0, anya[which(years==2011)])
+      anya.2010[i] = 
+        ifelse(length(which(years == 2010))==0, 0, anya[which(years==2010)])
+      anya.2009[i] = 
+        ifelse(length(which(years == 2009))==0, 0, anya[which(years==2009)])
+      anya.2008[i] = 
+        ifelse(length(which(years == 2008))==0, 0, anya[which(years==2008)])
+      anya.2007[i] = 
+        ifelse(length(which(years == 2007))==0, 0, anya[which(years==2007)])
+      anya.2006[i] = 
+        ifelse(length(which(years == 2006))==0, 0, anya[which(years==2006)])
+    }
+  qbs.df = data.frame("name" = qb.name, "age" = qb.age, "draft" = qb.draft, 
+    "attempts.2018" = qb.attempts.2018, "attempts.2017" = qb.attempts.2017,
+    "attempts.2016" = qb.attempts.2016, "attempts.2015" = qb.attempts.2015,
+    "attempts.2014" = qb.attempts.2014, "attempts.2013" = qb.attempts.2013,
+    "attempts.2012" = qb.attempts.2012, "attempts.2011" = qb.attempts.2011,
+    "attempts.2010" = qb.attempts.2010, "attempts.2009" = qb.attempts.2009,
+    "attempts.2008" = qb.attempts.2008, "attempts.2007" = qb.attempts.2007,
+    "attempts.2006" = qb.attempts.2006, 
+    "qbr.2018" = qbr.2018, "qbr.2017" = qbr.2017, "qbr.2016" = qbr.2016,
+    "qbr.2015" = qbr.2015, "qbr.2014" = qbr.2014, "qbr.2013" = qbr.2013,
+    "qbr.2012" = qbr.2012, "qbr.2011" = qbr.2011, "qbr.2010" = qbr.2010,
+    "qbr.2009" = qbr.2009, "qbr.2008" = qbr.2008, "qbr.2007" = qbr.2007, "qbr.2006" = qbr.2006,
+    "anya.2018" = anya.2018, "anya.2017" = anya.2017, "anya.2016" = anya.2016,
+    "anya.2015" = anya.2015, "anya.2014" = anya.2014, "anya.2013" = anya.2013,
+    "anya.2012" = anya.2012, "anya.2011" = anya.2011, "anya.2010" = anya.2010,
+    "anya.2009" = anya.2009, "anya.2008" = anya.2008, "anya.2007" = anya.2007, "anya.2006" = anya.2006)
+  qbs.df$draft = as.numeric(qbs.df$draft)
+  return(qbs.df)
+}
+```
+
+#merge pff data with pfr data
+```{r}
+qbs.2018.df = make.pfr.df(qbs1, pages)
+qbs.2017.df = make.pfr.df(qbs2, pages1)
+
+pff.qbs = read.csv("qb-grades/pff-qbs.csv")
+pff.qbs$name = paste(pff.qbs$First.name, pff.qbs$Last.name)
+pff.qbs$name = trimws(pff.qbs$name)
+pff.qbs$name = str_replace_all(pff.qbs$name, "  ", " ")
+qbs.2018.df$name = trimws(qbs.2018.df$name)
+qbs.2017.df$name = trimws(qbs.2017.df$name)
+
+indices = c(24,25,28,33,38,39,46)
+draft.slots = c(3,1,10,7,171,1,31)
+for (i in c(1:length(indices))){
+  qbs.2018.df$draft[indices[i]] = draft.slots[i]
+}
+indices = c(38:39)
+ages = c(23.33,29.83)
+for (i in c(1:length(indices))){
+  qbs.2018.df$age[indices[i]] = ages[i]
+}
+
+qbs.2017.df = qbs.2017.df[which(!qbs.2017.df$name %in% qbs.2018.df$name &
+  qbs.2017.df$name %in% pff.qbs$name), ]
+qbs.2018.df = rbind(qbs.2018.df, qbs.2017.df)
+
+pff.qbs = merge(qbs.2018.df, pff.qbs, by="name", all.x = F, all.y = T)
+indices = c(9, 10, 17, 21, 26, 28, 36, 38, 46, 48, 52, 58)
+ages = c(33.9, 24.23, 32.17, 24.6, 21.67, 33.32, 30.8, 24.87, 27.72, 23.9, 27.55, 25.69)
+draft = c(22, 147, 57, 100, 52, 43, 199, 162, 73, 187, 2, 250) 
+for (i in c(1:length(indices))){
+  pff.qbs$age[indices[i]] = ages[i]
+  pff.qbs$draft[indices[i]] = draft[i]
+}
+pff.qbs$draft[which(is.na(pff.qbs$draft))] = 260
+pff.qbs = pff.qbs[which(!is.na(pff.qbs$attempts.2018)),]
+pff.qbs[is.na(pff.qbs)]=0
+```
+
+#modeling stuff
+```{r}
+decay = seq(.025, .8, by = .025)
+dataframes = as.list(c(1:length(decay)))
+data.full = data_frame()
+for(i in c(1:length(decay))){
+  data = data_frame()
+  for(year in as.character(c(2008:2017))){
+    grades = pff.qbs[,which(colnames(pff.qbs) == paste0("X",year))]
+    draft = pff.qbs$draft
+    age = pff.qbs$age - (2017 - as.numeric(year))
+    names = pff.qbs$name
+    last.attempts = pff.qbs[,which(colnames(pff.qbs) ==
+      paste0("attempts.",as.numeric(year)-1))]
+    last.grade = pff.qbs[,which(colnames(pff.qbs) ==
+      paste0("X",as.numeric(year)-1))]
+    model.weight = pff.qbs[,which(colnames(pff.qbs) == paste0("attempts.",year))]
+    weights = decay[i]^c(1:10)
+    num.year = rep(as.numeric(year), 56)
+    aggregated.grades = (
+      ifelse(num.year > 2017, weights[2]*pff.qbs$attempts.2017*pff.qbs$X2017, 0) +
+      ifelse(num.year > 2016, weights[2]*pff.qbs$attempts.2016*pff.qbs$X2016, 0) +
+      ifelse(num.year > 2015, weights[2]*pff.qbs$attempts.2015*pff.qbs$X2015, 0) +
+      ifelse(num.year > 2014, weights[2]*pff.qbs$attempts.2014*pff.qbs$X2014, 0) +
+      ifelse(num.year > 2013, weights[3]*pff.qbs$attempts.2013*pff.qbs$X2013, 0) +
+      ifelse(num.year > 2012, weights[4]*pff.qbs$attempts.2012*pff.qbs$X2012, 0) +
+      ifelse(num.year > 2011, weights[5]*pff.qbs$attempts.2011*pff.qbs$X2011, 0) +
+      ifelse(num.year > 2010, weights[6]*pff.qbs$attempts.2010*pff.qbs$X2010, 0) +
+      ifelse(num.year > 2009, weights[7]*pff.qbs$attempts.2009*pff.qbs$X2009, 0) +
+      ifelse(num.year > 2008, weights[8]*pff.qbs$attempts.2008*pff.qbs$X2008, 0) +
+      ifelse(num.year > 2007, weights[9]*pff.qbs$attempts.2007*pff.qbs$X2007, 0) +
+      ifelse(num.year > 2006, weights[10]*pff.qbs$attempts.2006*pff.qbs$X2006, 0)) /
+      (ifelse(num.year > 2017, weights[2]*pff.qbs$attempts.2017, 0) +
+      ifelse(num.year > 2016, weights[2]*pff.qbs$attempts.2016, 0) +
+      ifelse(num.year > 2015, weights[2]*pff.qbs$attempts.2015, 0) +
+      ifelse(num.year > 2014, weights[2]*pff.qbs$attempts.2014, 0) +
+      ifelse(num.year > 2013, weights[3]*pff.qbs$attempts.2013, 0) +
+      ifelse(num.year > 2012, weights[4]*pff.qbs$attempts.2012, 0) +
+      ifelse(num.year > 2011, weights[5]*pff.qbs$attempts.2011, 0) +
+      ifelse(num.year > 2010, weights[6]*pff.qbs$attempts.2010, 0) +
+      ifelse(num.year > 2009, weights[7]*pff.qbs$attempts.2009, 0) +
+      ifelse(num.year > 2008, weights[8]*pff.qbs$attempts.2008, 0) +
+      ifelse(num.year > 2007, weights[9]*pff.qbs$attempts.2007, 0) + 
+      ifelse(num.year > 2006, weights[10]*pff.qbs$attempts.2006, 0))
+    
+    prev.attempts = ifelse(num.year > 2017, pff.qbs$attempts.2017, 0) +
+      ifelse(num.year > 2016, pff.qbs$attempts.2016, 0) +
+      ifelse(num.year > 2015, pff.qbs$attempts.2015, 0) +
+      ifelse(num.year > 2014, pff.qbs$attempts.2014, 0) +
+      ifelse(num.year > 2013, pff.qbs$attempts.2013, 0) +
+      ifelse(num.year > 2012, pff.qbs$attempts.2012, 0) +
+      ifelse(num.year > 2011, pff.qbs$attempts.2011, 0) +
+      ifelse(num.year > 2010, pff.qbs$attempts.2010, 0) +
+      ifelse(num.year > 2009, pff.qbs$attempts.2009, 0) +
+      ifelse(num.year > 2008, pff.qbs$attempts.2008, 0) +
+      ifelse(num.year > 2007, pff.qbs$attempts.2007, 0) + 
+      ifelse(num.year > 2006, pff.qbs$attempts.2006, 0)
+    df = data.frame("year" = num.year, "name" = names, "grade" = grades,"age" = age, 
+      "draft" = draft, "prev.grade" = aggregated.grades, "model.weight" = model.weight, 
+      "prev.attempts" = prev.attempts, "last.grade" = last.grade ,"last.attempts" = last.attempts)
+    df$draft = ifelse(df$draft == 0, 260, df$draft)
+    data = rbind(data, df[which(!is.nan(df$prev.grade)), ])
+    if(i == 16){
+      print(decay[i])
+      data.full = rbind(data.full, df)
+    }
+  }
+  dataframes[[i]] = data[-which(data$prev.grade == 0 | data$grade == 0),]
+  dataframes[[i]]$age = dataframes[[i]]$age - 30
+}
+```
+
+#set prior and add to all dataframes
+```{r}
+prior = weighted.mean(data.full$grade[which(data.full$year < 2014)],
+  data.full$model.weight[which(data.full$year < 2014)])
+for (i in c(1:length(dataframes))){
+  dataframes[[i]]$prior = rep(prior, nrow(dataframes[[i]]))
+}
+
+```
+
+#find optimal combo decay for previous weights and number of prior attempts to specify
+```{r}
+grid.search = data.frame()
+prior.attempts = c(50, 100, 200, 350, 500, 750, 1000, 1500)
+for (i in c(1:length(dataframes))){
+  mse = c(1:length(prior.attempts))
+  for(j in c(1:length(prior.attempts))){
+    dataframe = dataframes[[i]]
+    num.prior.attempts = prior.attempts[j]
+    dataframe$posterior = (dataframe$prior*num.prior.attempts +
+      dataframe$prev.grade*dataframe$prev.attempts)/
+      (num.prior.attempts + dataframe$prev.attempts)
+    model = lm(grade ~ draft + posterior + last.attempts, 
+      data = dataframe[which(dataframe$year < 2014), ], weights = model.weight)
+    pred = predict(model, dataframe[which(dataframe$year %in% c(2014:2015)), ])
+    target = dataframe$grade[which(dataframe$year %in% c(2014:2015))]
+    mse.weight = dataframe$model.weight[which(dataframe$year %in% c(2014:2015))]
+    mse[j] = sum(mse.weight*(pred-target)^2)/sum(mse.weight)
+  }
+  exp.decay = rep(decay[i], length(prior.attempts))
+  grid.search = rbind(grid.search, data.frame("exp.decay" = exp.decay, 
+    "prior.n" = prior.attempts, "mse" = mse))
+}
+
+library(ggplot2)
+ggplot(data=grid.search, aes(x=exp.decay, y=mse, colour = mse)) +
+  geom_point(size=sqrt(grid.search$prior.n)/10) + 
+  labs(size = "Prior Size", title = "MSE vs. Decay Rate (Size of points = size of prior)") + ylab("MSE") +
+  xlab("Decay Rate") + 
+  geom_hline(yintercept=min(grid.search$mse), linetype="dashed", color = "red")
+
+```
+
+```{r}
+#use prior n = 1500 and decay = .30
+final.df = dataframes[[16]]
+num.prior.attempts = 1500
+final.df$posterior = (final.df$prior*num.prior.attempts +
+  final.df$prev.grade*final.df$prev.attempts)/
+  (num.prior.attempts + final.df$prev.attempts)
+final.model = lm(grade ~ posterior + draft + last.attempts, 
+    data = final.df[which(final.df$year < 2016),],weights = model.weight)
+summary(final.model)
+
+```
+
+#plots n stuff
+```{r}
+library(psych)
+ggplot(data=final.df, aes(x=last.grade, y=grade)) +
+  geom_point(size=(2/(1/final.df$last.attempts + 1/final.df$model.weight))/200) + 
+  labs(title = "This Season's Grade vs. Last Season's Grade (Size = number of attempts)") + ylab("This Season's Grade") +
+  xlab("Last Season's Grade") + 
+  geom_abline(intercept = 0, slope = 1, color="red", linetype="dashed") + 
+  xlim(25,95) +
+  ylim(25,95)
+
+ggplot(data=final.df, aes(x=age+30, y=grade - last.grade), colour = (grade - last.grade)) +
+  geom_point(size=(2/(1/final.df$last.attempts + 1/final.df$model.weight))/200) + 
+  labs(title = "Change in Grade vs. Age (Size = number of attempts)") + 
+  ylab("Change in Grade") +
+  xlab("Age") + 
+  geom_hline(yintercept = 0, color="red", linetype="dashed")
+
+ggplot(data=final.df, aes(x=log(draft), y=grade), colour = (grade)) +
+  geom_point(size=(2/(1/final.df$last.attempts + 1/final.df$model.weight))/200) + 
+  labs(title = "Grade vs. log of Draft Pick (Size = number of attempts)") + 
+  ylab("Age") +
+  xlab("Grade") + 
+  ylim(25, 95)
+
+ggplot(data=final.df, aes(x=last.attempts, y=grade), colour = (grade)) +
+  geom_point(size=1) + 
+  labs(title = "Grade vs. Last Season's Number of Attempts") + 
+  ylab("Grade") +
+  xlab("Attempts") + 
+  ylim(25, 95)
+  
+simple = lm(grade ~ last.grade, final.df, weights = model.weight)
+summary(simple)
+```
+
+#cross validate using model
+```{r}
+test.set = final.df[which(final.df$year > 2015),]
+train.set = final.df[which(final.df$year < 2016),]
+pred = predict(final.model, test.set)
+simple.pred = predict(simple, test.set)
+target = test.set$grade
+weights = test.set$model.weight
+uninformed.pred = mean(train.set$grade)
+last.grade.pred = test.set$last.grade
+w.mse = sum(weights*((pred-target)^2))/(sum(weights))
+simple.mse = sum(weights*((simple.pred-target)^2))/(sum(weights))
+uninformed.mse = sum(weights*((uninformed.pred-target)^2))/(sum(weights))
+last.grade.mse = sum(weights*((last.grade.pred-target)^2))/(sum(weights))
+
+mse.reduction = c((uninformed.mse - w.mse)/uninformed.mse, (last.grade.mse - 
+  w.mse)/last.grade.mse)
+```
+
+----------------------------------------
+
+#Re-run grid search for thesis
+
+#modeling stuff
+```{r}
+prev.decay = .3^(c(1:10))
+decay.qbr = seq(.2, .95, by = .05)
+decay.anya = decay.qbr
+dataframes.new = as.list(c(1:(length(decay.qbr))^2))
+data.full.new = data_frame()
+for(i in c(1:length(decay.qbr))){
+  for(j in c(1:length(decay.anya))){
+    data = data_frame()
+  for(year in as.character(c(2008:2017))){
+    grades = pff.qbs[,which(colnames(pff.qbs) == paste0("X",year))]
+    qbr = pff.qbs[,which(colnames(pff.qbs) == paste0("qbr.",year))]
+    anya = pff.qbs[,which(colnames(pff.qbs) == paste0("anya.",year))]
+    draft = pff.qbs$draft
+    age = pff.qbs$age - (2017 - as.numeric(year))
+    names = pff.qbs$name
+    last.attempts = pff.qbs[,which(colnames(pff.qbs) ==
+      paste0("attempts.",as.numeric(year)-1))]
+    last.grade = pff.qbs[,which(colnames(pff.qbs) ==
+      paste0("X",as.numeric(year)-1))]
+    model.weight = pff.qbs[,which(colnames(pff.qbs) == paste0("attempts.",year))]
+    weights = prev.decay
+    weights.qbr = decay.qbr[i]^c(1:10)
+    weights.anya = decay.anya[j]^c(1:10)
+    num.year = rep(as.numeric(year), 56)
+    aggregated.grades = (
+      ifelse(num.year > 2017, weights[2]*pff.qbs$attempts.2017*pff.qbs$X2017, 0) +
+      ifelse(num.year > 2016, weights[2]*pff.qbs$attempts.2016*pff.qbs$X2016, 0) +
+      ifelse(num.year > 2015, weights[2]*pff.qbs$attempts.2015*pff.qbs$X2015, 0) +
+      ifelse(num.year > 2014, weights[2]*pff.qbs$attempts.2014*pff.qbs$X2014, 0) +
+      ifelse(num.year > 2013, weights[3]*pff.qbs$attempts.2013*pff.qbs$X2013, 0) +
+      ifelse(num.year > 2012, weights[4]*pff.qbs$attempts.2012*pff.qbs$X2012, 0) +
+      ifelse(num.year > 2011, weights[5]*pff.qbs$attempts.2011*pff.qbs$X2011, 0) +
+      ifelse(num.year > 2010, weights[6]*pff.qbs$attempts.2010*pff.qbs$X2010, 0) +
+      ifelse(num.year > 2009, weights[7]*pff.qbs$attempts.2009*pff.qbs$X2009, 0) +
+      ifelse(num.year > 2008, weights[8]*pff.qbs$attempts.2008*pff.qbs$X2008, 0) +
+      ifelse(num.year > 2007, weights[9]*pff.qbs$attempts.2007*pff.qbs$X2007, 0) +
+      ifelse(num.year > 2006, weights[10]*pff.qbs$attempts.2006*pff.qbs$X2006, 0)) /
+      (ifelse(num.year > 2017, weights[2]*pff.qbs$attempts.2017, 0) +
+      ifelse(num.year > 2016, weights[2]*pff.qbs$attempts.2016, 0) +
+      ifelse(num.year > 2015, weights[2]*pff.qbs$attempts.2015, 0) +
+      ifelse(num.year > 2014, weights[2]*pff.qbs$attempts.2014, 0) +
+      ifelse(num.year > 2013, weights[3]*pff.qbs$attempts.2013, 0) +
+      ifelse(num.year > 2012, weights[4]*pff.qbs$attempts.2012, 0) +
+      ifelse(num.year > 2011, weights[5]*pff.qbs$attempts.2011, 0) +
+      ifelse(num.year > 2010, weights[6]*pff.qbs$attempts.2010, 0) +
+      ifelse(num.year > 2009, weights[7]*pff.qbs$attempts.2009, 0) +
+      ifelse(num.year > 2008, weights[8]*pff.qbs$attempts.2008, 0) +
+      ifelse(num.year > 2007, weights[9]*pff.qbs$attempts.2007, 0) + 
+      ifelse(num.year > 2006, weights[10]*pff.qbs$attempts.2006, 0))
+    
+    prev.attempts = ifelse(num.year > 2017, pff.qbs$attempts.2017, 0) +
+      ifelse(num.year > 2016, pff.qbs$attempts.2016, 0) +
+      ifelse(num.year > 2015, pff.qbs$attempts.2015, 0) +
+      ifelse(num.year > 2014, pff.qbs$attempts.2014, 0) +
+      ifelse(num.year > 2013, pff.qbs$attempts.2013, 0) +
+      ifelse(num.year > 2012, pff.qbs$attempts.2012, 0) +
+      ifelse(num.year > 2011, pff.qbs$attempts.2011, 0) +
+      ifelse(num.year > 2010, pff.qbs$attempts.2010, 0) +
+      ifelse(num.year > 2009, pff.qbs$attempts.2009, 0) +
+      ifelse(num.year > 2008, pff.qbs$attempts.2008, 0) +
+      ifelse(num.year > 2007, pff.qbs$attempts.2007, 0) + 
+      ifelse(num.year > 2006, pff.qbs$attempts.2006, 0)
+    
+    aggregated.qbr = (
+      ifelse(num.year > 2017, weights.qbr[2]*pff.qbs$attempts.2017*pff.qbs$qbr.2017, 0) +
+      ifelse(num.year > 2016, weights.qbr[2]*pff.qbs$attempts.2016*pff.qbs$qbr.2016, 0) +
+      ifelse(num.year > 2015, weights.qbr[2]*pff.qbs$attempts.2015*pff.qbs$qbr.2015, 0) +
+      ifelse(num.year > 2014, weights.qbr[2]*pff.qbs$attempts.2014*pff.qbs$qbr.2014, 0) +
+      ifelse(num.year > 2013, weights.qbr[3]*pff.qbs$attempts.2013*pff.qbs$qbr.2013, 0) +
+      ifelse(num.year > 2012, weights.qbr[4]*pff.qbs$attempts.2012*pff.qbs$qbr.2012, 0) +
+      ifelse(num.year > 2011, weights.qbr[5]*pff.qbs$attempts.2011*pff.qbs$qbr.2011, 0) +
+      ifelse(num.year > 2010, weights.qbr[6]*pff.qbs$attempts.2010*pff.qbs$qbr.2010, 0) +
+      ifelse(num.year > 2009, weights.qbr[7]*pff.qbs$attempts.2009*pff.qbs$qbr.2009, 0) +
+      ifelse(num.year > 2008, weights.qbr[8]*pff.qbs$attempts.2008*pff.qbs$qbr.2008, 0) +
+      ifelse(num.year > 2007, weights.qbr[9]*pff.qbs$attempts.2007*pff.qbs$qbr.2007, 0) +
+      ifelse(num.year > 2006, weights.qbr[10]*pff.qbs$attempts.2006*pff.qbs$qbr.2006, 0)) /
+      (ifelse(num.year > 2017, weights.qbr[2]*pff.qbs$attempts.2017, 0) +
+      ifelse(num.year > 2016, weights.qbr[2]*pff.qbs$attempts.2016, 0) +
+      ifelse(num.year > 2015, weights.qbr[2]*pff.qbs$attempts.2015, 0) +
+      ifelse(num.year > 2014, weights.qbr[2]*pff.qbs$attempts.2014, 0) +
+      ifelse(num.year > 2013, weights.qbr[3]*pff.qbs$attempts.2013, 0) +
+      ifelse(num.year > 2012, weights.qbr[4]*pff.qbs$attempts.2012, 0) +
+      ifelse(num.year > 2011, weights.qbr[5]*pff.qbs$attempts.2011, 0) +
+      ifelse(num.year > 2010, weights.qbr[6]*pff.qbs$attempts.2010, 0) +
+      ifelse(num.year > 2009, weights.qbr[7]*pff.qbs$attempts.2009, 0) +
+      ifelse(num.year > 2008, weights.qbr[8]*pff.qbs$attempts.2008, 0) +
+      ifelse(num.year > 2007, weights.qbr[9]*pff.qbs$attempts.2007, 0) + 
+      ifelse(num.year > 2006, weights.qbr[10]*pff.qbs$attempts.2006, 0))
+    
+    aggregated.anya = (
+      ifelse(num.year > 2017, weights.anya[2]*pff.qbs$attempts.2017*pff.qbs$anya.2017, 0) +
+      ifelse(num.year > 2016, weights.anya[2]*pff.qbs$attempts.2016*pff.qbs$anya.2016, 0) +
+      ifelse(num.year > 2015, weights.anya[2]*pff.qbs$attempts.2015*pff.qbs$anya.2015, 0) +
+      ifelse(num.year > 2014, weights.anya[2]*pff.qbs$attempts.2014*pff.qbs$anya.2014, 0) +
+      ifelse(num.year > 2013, weights.anya[3]*pff.qbs$attempts.2013*pff.qbs$anya.2013, 0) +
+      ifelse(num.year > 2012, weights.anya[4]*pff.qbs$attempts.2012*pff.qbs$anya.2012, 0) +
+      ifelse(num.year > 2011, weights.anya[5]*pff.qbs$attempts.2011*pff.qbs$anya.2011, 0) +
+      ifelse(num.year > 2010, weights.anya[6]*pff.qbs$attempts.2010*pff.qbs$anya.2010, 0) +
+      ifelse(num.year > 2009, weights.anya[7]*pff.qbs$attempts.2009*pff.qbs$anya.2009, 0) +
+      ifelse(num.year > 2008, weights.anya[8]*pff.qbs$attempts.2008*pff.qbs$anya.2008, 0) +
+      ifelse(num.year > 2007, weights.anya[9]*pff.qbs$attempts.2007*pff.qbs$anya.2007, 0) +
+      ifelse(num.year > 2006, weights.anya[10]*pff.qbs$attempts.2006*pff.qbs$anya.2006, 0)) /
+      (ifelse(num.year > 2017, weights.anya[2]*pff.qbs$attempts.2017, 0) +
+      ifelse(num.year > 2016, weights.anya[2]*pff.qbs$attempts.2016, 0) +
+      ifelse(num.year > 2015, weights.anya[2]*pff.qbs$attempts.2015, 0) +
+      ifelse(num.year > 2014, weights.anya[2]*pff.qbs$attempts.2014, 0) +
+      ifelse(num.year > 2013, weights.anya[3]*pff.qbs$attempts.2013, 0) +
+      ifelse(num.year > 2012, weights.anya[4]*pff.qbs$attempts.2012, 0) +
+      ifelse(num.year > 2011, weights.anya[5]*pff.qbs$attempts.2011, 0) +
+      ifelse(num.year > 2010, weights.anya[6]*pff.qbs$attempts.2010, 0) +
+      ifelse(num.year > 2009, weights.anya[7]*pff.qbs$attempts.2009, 0) +
+      ifelse(num.year > 2008, weights.anya[8]*pff.qbs$attempts.2008, 0) +
+      ifelse(num.year > 2007, weights.anya[9]*pff.qbs$attempts.2007, 0) + 
+      ifelse(num.year > 2006, weights.anya[10]*pff.qbs$attempts.2006, 0))
+    
+    df = data.frame("year" = num.year, "name" = names, "grade" = grades, "qbr" = qbr,
+      "anya" = anya, "age" = age, 
+      "draft" = draft, "prev.grade" = aggregated.grades, "prev.qbr" = aggregated.qbr, 
+      "prev.anya" = aggregated.anya, "model.weight" = model.weight, 
+      "prev.attempts" = prev.attempts, "last.grade" = last.grade ,"last.attempts" = last.attempts)
+    df$draft = ifelse(df$draft == 0, 260, df$draft)
+    data = rbind(data, df[which(!is.nan(df$prev.grade)), ])
+  }
+  index = 16*(i-1) + j
+  dataframes.new[[index]] = data[-which(data$prev.grade == 0 | data$grade == 0),]
+  dataframes.new[[index]]$age = dataframes.new[[index]]$age - 30
+  }
+}
+```
+
+#set priors and add to all dataframes
+```{r}
+data.full.new = dataframes.new[[49]]
+prior = weighted.mean(data.full.new$grade[which(data.full.new$year < 2014)],
+  data.full.new$model.weight[which(data.full.new$year < 2014)])
+prior.qbr = weighted.mean(data.full.new$qbr[which(data.full.new$year < 2014 & 
+  !is.nan(data.full.new$qbr))], data.full.new$model.weight[which(data.full.new$year < 2014 & 
+  !is.nan(data.full.new$qbr))])
+prior.anya = weighted.mean(data.full.new$anya[which(data.full.new$year < 2014 & 
+  !is.nan(data.full.new$anya))], data.full.new$model.weight[which(data.full.new$year < 2014 & 
+  !is.nan(data.full.new$anya))])
+for (i in c(1:length(dataframes.new))){
+  dataframes.new[[i]]$prior.qbr = rep(prior.qbr, nrow(dataframes.new[[i]]))
+  dataframes.new[[i]]$prior.anya = rep(prior.anya, nrow(dataframes.new[[i]]))
+}
+
+
+```
+
+#find optimal combo decay for previous weights and number of prior attempts to specify
+```{r}
+grid.search = data.frame()
+prior.attempts = 1500
+prior.qbr.attempts = c(200, 350, 500, 750, 1000, 1500, 2000, 2500)
+prior.anya.attempts = c(200, 350, 500, 750, 1000, 1500, 2000, 2500)
+for (i in c(1:length(dataframes.new))){
+  mse = c(1:length(prior.qbr.attempts)^2)
+  for(j in c(1:length(prior.qbr.attempts)^2)){
+    dataframe = dataframes.new[[i]]
+    index.qbr = ceiling(j/length(prior.qbr.attempts))
+    index.anya = j%%length(prior.qbr.attempts)
+    index.anya = ifelse(index.anya == 0, length(prior.qbr.attempts), index.anya)
+    num.prior.attempts = 1500
+    num.prior.qbr.attempts = prior.qbr.attempts[index.qbr]
+    num.prior.anya.attempts = prior.anya.attempts[index.anya]
+    dataframe$posterior.qbr = (dataframe$prior.qbr*num.prior.qbr.attempts +
+      dataframe$prev.qbr*dataframe$prev.attempts)/
+      (num.prior.qbr.attempts + dataframe$prev.attempts)
+    dataframe$posterior.anya = (dataframe$prior.anya*num.prior.anya.attempts +
+      dataframe$prev.anya*dataframe$prev.attempts)/
+      (num.prior.anya.attempts + dataframe$prev.attempts)
+    model = lm(grade ~ draft + posterior.qbr + last.attempts, 
+      data = dataframe[which(dataframe$year < 2014), ], weights = model.weight)
+    pred = predict(model, dataframe[which(dataframe$year %in% c(2014:2015)), ])
+    target = dataframe$grade[which(dataframe$year %in% c(2014:2015))]
+    mse.weight = dataframe$model.weight[which(dataframe$year %in% c(2014:2015))]
+    mse[j] = sum(mse.weight*(pred-target)^2)/sum(mse.weight)
+  }
+  exp.decay.qbr = rep(decay.qbr[ceiling(i/16)], length(prior.qbr.attempts)^2)
+  exp.decay.anya = rep(ifelse(i%%16==0, .8, decay.anya[i%%16]), length(prior.qbr.attempts)^2)
+  grid.qbr.prior = sort(rep(prior.qbr.attempts, 8))
+  grid.anya.prior = rep(prior.anya.attempts, 8)
+  grid.search = rbind(grid.search, data.frame("qbr.decay" = exp.decay.qbr, "anya.decay" = exp.decay.anya, 
+    "prior.qbr" = grid.qbr.prior, "prior.anya" = grid.anya.prior, "mse" = mse))
+}
+
+grid.search = grid.search[, c(1,3,5)]
+grid.search = unique(grid.search)
+```
+
+```{r}
+#only use qbr for now... decay = .8, prior = 1500
+qbr.data = dataframes.new[[208]]
+num.prior.qbr.attempts = 1500
+num.prior.anya.attempts = 1500
+qbr.data$posterior.qbr = (qbr.data$prior.qbr*num.prior.qbr.attempts +
+  qbr.data$prev.qbr*qbr.data$prev.attempts)/
+  (num.prior.qbr.attempts + qbr.data$prev.attempts)
+qbr.data$posterior.anya = (qbr.data$prior.anya*num.prior.anya.attempts +
+  qbr.data$prev.anya*qbr.data$prev.attempts)/
+  (num.prior.anya.attempts + qbr.data$prev.attempts)
+model = lm(grade ~ draft + posterior.qbr + last.attempts, 
+  data = qbr.data[which(qbr.data$year < 2014), ], weights = model.weight)
+pred = predict(model, qbr.data[which(qbr.data$year %in% c(2014:2015)), ])
+target = qbr.data$grade[which(qbr.data$year %in% c(2014:2015))]
+mse.weight = qbr.data$model.weight[which(qbr.data$year %in% c(2014:2015))]
+mse.qbr = sum(mse.weight*(pred-target)^2)/sum(mse.weight)
+
+```
+
+#now try to predict these values using QBR, NY/A, Draft, and Age
+```{r}
+#large dataframe
+qbs.2018.df = make.pfr.df(qbs1, pages)
+qbs.2017.df = make.pfr.df(qbs2, pages1)
+qbs.2016.df = make.pfr.df(qbs3, pages2)
+qbs.2015.df = make.pfr.df(qbs4, pages3)
+qbs.2014.df = make.pfr.df(qbs5, pages4)
+qbs.2013.df = make.pfr.df(qbs6, pages5)
+qbs.2012.df = make.pfr.df(qbs7, pages6)
+qbs.2011.df = make.pfr.df(qbs8, pages7)
+qbs.2010.df = make.pfr.df(qbs9, pages8)
+
+all.qbs = unique(rbind(qbs.2018.df, qbs.2017.df, qbs.2016.df, qbs.2015.df, qbs.2014.df, 
+  qbs.2013.df, qbs.2012.df,qbs.2011.df, qbs.2010.df))
+all.qbs$total.attempts = all.qbs$attempts.2018 + all.qbs$attempts.2017 + all.qbs$attempts.2016 +  
+  all.qbs$attempts.2015 + all.qbs$attempts.2014 + all.qbs$attempts.2013 + all.qbs$attempts.2012 +  
+  all.qbs$attempts.2011 + all.qbs$attempts.2010
+all.qbs = filter(all.qbs, total.attempts > 5)
+
+impute.pfr.data = c(17, 21, 24, 30, 37, 45, 46, 105:107, 109:124, 126:166, 
+  75, 73, 77, 76, 104, 79, 84, 78, 81,
+  91, 94, 74, 82, 85, 86, 87, 88, 89,
+  90, 93, 95, 96, 97, 98, 100, 101, 103)
+all.qbs$draft[impute.pfr.data] = c(1, 4, 10, 8, 31, 171, 1, 145, 106, 17, 185, 249, 64, 110, 106,
+  8, 12, NA, 25, 209, NA, 205, NA, NA, 110, 201, 155, 22, 36, 60, 7, 10, 208, 194, 25, 176, 217, 1, 
+  92, 22, 2, NA, 40, 3, NA, 5, 155, 101, 19, NA, 75, NA, 122, NA, 22, 118, 108, 33, 174, NA, NA, 156,
+  163, 45, 56, 85, 204, 
+  11, 1, NA, 103, 152, 26, 16, 115, NA, 
+  74, 49, 36, NA, 81, 100, NA, NA, 139, 
+  65, NA, 1, 187, 22, 178, 48, NA, 1)
+impute.pfr.data = impute.pfr.data[-c(1:5)]
+all.qbs$age[impute.pfr.data] = (c(24.88, 31.23, 35.45, 37.55, 31.04, 29.66, 28.76, 35.78, 28.89, 36.22, 30.6, 30.9, 
+  27.4, 37.1, 33.6, 30.3, 34.7, 34, 27.96, 38.48, 33.61, 30.88, 34.09, 34.43, 44.15, 39.04, 35.71, 30.72,
+  36.01, 31.47, 32, 34.8, 39.53, 35.25, 38.43, 42.18, 35.46, 37.44, 35.7, 33.37, 46.08, 41.71, 33.34, 
+  37.63, 44.05, 41.57, 35.99, 31.53, 46.36, 37.89, 48.37, 40.95, 49.3, 34.53, 33.33, 46.5, 34.04, 39.18,
+  47.24, 33.36, 35.97, 32.9,
+  35.76, 39.09, 34.48, 27.67, 31.68, 24.95, 28.85, 29.9, 31.43, 
+  30.64, 35.64, 31.23, 39.06, 36.48, 26, 25.44, 29.16, 26.26, 
+  29.61, 38.78, 42.85, 43.34, 26.15, 27.54, 31.36, 29.55, 38.6) - 1.412)
+all.qbs$draft[which(is.na(all.qbs$draft))] = 260
+
+all.qbs$name = as.character(all.qbs$name)
+all.qbs$name = trimws(all.qbs$name)
+all.qbs$name[51] = "Deshone Kizer"
+
+pff.qbs = read.csv("qb-grades/pff-qbs.csv")
+pff.qbs$name = as.character(paste(pff.qbs$First.name, pff.qbs$Last.name))
+pff.qbs$name = trimws(pff.qbs$name)
+pff.qbs$name = str_replace_all(pff.qbs$name, "  ", " ")
+pff.qbs[is.na(pff.qbs)]=0
+all.qbs = merge(all.qbs, pff.qbs, by="name", all.x = T, all.y = T)
+#this all.qbs data frame is saved
+
+```
+
+#predict qb performance by year
+```{r}
+for (i in (c(17:29))){
+  all.qbs[which(is.na(all.qbs[,i])),i] = 0
+}
+grade.decay = .4
+qbr.decay = .8
+thesis.data = data.frame()
+prior = weighted.mean(data.full.new$grade[which(data.full.new$year == 2017)],
+  data.full.new$model.weight[which(data.full.new$year == 2017)])
+for(year in as.character(c(2010:2018))){
+  num.year = rep(as.numeric(year), nrow(all.qbs))
+  draft = all.qbs$draft
+  age = all.qbs$age - (2017 - as.numeric(year))
+  names = all.qbs$name
+  grades = ifelse(num.year == 2018, NA, all.qbs[,which(colnames(all.qbs) == paste0("X",year))])
+  last.attempts = all.qbs[,which(colnames(all.qbs) ==
+    paste0("attempts.",as.numeric(year)-1))]
+  curr.attempts = all.qbs[,which(colnames(all.qbs) == paste0("attempts.",year))]
+  total.attempts = all.qbs$attempts.2006 + all.qbs$attempts.2007 + all.qbs$attempts.2008 +
+    all.qbs$attempts.2009 + ifelse(num.year > 2010, all.qbs$attempts.2010, 0) + 
+    ifelse(num.year > 2011, all.qbs$attempts.2011, 0) + 
+    ifelse(num.year > 2012, all.qbs$attempts.2012, 0) + 
+    ifelse(num.year > 2013, all.qbs$attempts.2013, 0) + 
+    ifelse(num.year > 2014, all.qbs$attempts.2014, 0) + 
+    ifelse(num.year > 2015, all.qbs$attempts.2015, 0) + 
+    ifelse(num.year > 2016, all.qbs$attempts.2016, 0) + 
+    ifelse(num.year > 2017, all.qbs$attempts.2017, 0)
+  weights = grade.decay^c(1:12)
+  qbr.weights = qbr.decay^c(1:12)
+  
+  aggregated.grades = (
+    ifelse(num.year > 2017, weights[1]*all.qbs$attempts.2017*all.qbs$X2017, 0) +
+    ifelse(num.year > 2016, weights[2]*all.qbs$attempts.2016*all.qbs$X2016, 0) +
+    ifelse(num.year > 2015, weights[3]*all.qbs$attempts.2015*all.qbs$X2015, 0) +
+    ifelse(num.year > 2014, weights[4]*all.qbs$attempts.2014*all.qbs$X2014, 0) +
+    ifelse(num.year > 2013, weights[5]*all.qbs$attempts.2013*all.qbs$X2013, 0) +
+    ifelse(num.year > 2012, weights[6]*all.qbs$attempts.2012*all.qbs$X2012, 0) +
+    ifelse(num.year > 2011, weights[7]*all.qbs$attempts.2011*all.qbs$X2011, 0) +
+    ifelse(num.year > 2010, weights[8]*all.qbs$attempts.2010*all.qbs$X2010, 0) +
+    ifelse(num.year > 2009, weights[9]*all.qbs$attempts.2009*all.qbs$X2009, 0) +
+    ifelse(num.year > 2008, weights[10]*all.qbs$attempts.2008*all.qbs$X2008, 0) +
+    ifelse(num.year > 2007, weights[11]*all.qbs$attempts.2007*all.qbs$X2007, 0) +
+    ifelse(num.year > 2006, weights[12]*all.qbs$attempts.2006*all.qbs$X2006, 0)) /
+    (ifelse(num.year > 2017, weights[1]*all.qbs$attempts.2017, 0) +
+    ifelse(num.year > 2016, weights[2]*all.qbs$attempts.2016, 0) +
+    ifelse(num.year > 2015, weights[3]*all.qbs$attempts.2015, 0) +
+    ifelse(num.year > 2014, weights[4]*all.qbs$attempts.2014, 0) +
+    ifelse(num.year > 2013, weights[5]*all.qbs$attempts.2013, 0) +
+    ifelse(num.year > 2012, weights[6]*all.qbs$attempts.2012, 0) +
+    ifelse(num.year > 2011, weights[7]*all.qbs$attempts.2011, 0) +
+    ifelse(num.year > 2010, weights[8]*all.qbs$attempts.2010, 0) +
+    ifelse(num.year > 2009, weights[9]*all.qbs$attempts.2009, 0) +
+    ifelse(num.year > 2008, weights[10]*all.qbs$attempts.2008, 0) +
+    ifelse(num.year > 2007, weights[11]*all.qbs$attempts.2007, 0) + 
+    ifelse(num.year > 2006, weights[12]*all.qbs$attempts.2006, 0))
+  
+  aggregated.qbr = (
+    ifelse(num.year > 2017, qbr.weights[1]*all.qbs$attempts.2017*all.qbs$qbr.2017, 0) +
+    ifelse(num.year > 2016, qbr.weights[2]*all.qbs$attempts.2016*all.qbs$qbr.2016, 0) +
+    ifelse(num.year > 2015, qbr.weights[3]*all.qbs$attempts.2015*all.qbs$qbr.2015, 0) +
+    ifelse(num.year > 2014, qbr.weights[4]*all.qbs$attempts.2014*all.qbs$qbr.2014, 0) +
+    ifelse(num.year > 2013, qbr.weights[5]*all.qbs$attempts.2013*all.qbs$qbr.2013, 0) +
+    ifelse(num.year > 2012, qbr.weights[6]*all.qbs$attempts.2012*all.qbs$qbr.2012, 0) +
+    ifelse(num.year > 2011, qbr.weights[7]*all.qbs$attempts.2011*all.qbs$qbr.2011, 0) +
+    ifelse(num.year > 2010, qbr.weights[8]*all.qbs$attempts.2010*all.qbs$qbr.2010, 0) +
+    ifelse(num.year > 2009, qbr.weights[9]*all.qbs$attempts.2009*all.qbs$qbr.2009, 0) +
+    ifelse(num.year > 2008, qbr.weights[10]*all.qbs$attempts.2008*all.qbs$qbr.2008, 0) +
+    ifelse(num.year > 2007, qbr.weights[11]*all.qbs$attempts.2007*all.qbs$qbr.2007, 0) +
+    ifelse(num.year > 2006, qbr.weights[12]*all.qbs$attempts.2006*all.qbs$qbr.2006, 0)) /
+    (ifelse(num.year > 2017, qbr.weights[1]*all.qbs$attempts.2017, 0) +
+    ifelse(num.year > 2016, qbr.weights[2]*all.qbs$attempts.2016, 0) +
+    ifelse(num.year > 2015, qbr.weights[3]*all.qbs$attempts.2015, 0) +
+    ifelse(num.year > 2014, qbr.weights[4]*all.qbs$attempts.2014, 0) +
+    ifelse(num.year > 2013, qbr.weights[5]*all.qbs$attempts.2013, 0) +
+    ifelse(num.year > 2012, qbr.weights[6]*all.qbs$attempts.2012, 0) +
+    ifelse(num.year > 2011, qbr.weights[7]*all.qbs$attempts.2011, 0) +
+    ifelse(num.year > 2010, qbr.weights[8]*all.qbs$attempts.2010, 0) +
+    ifelse(num.year > 2009, qbr.weights[9]*all.qbs$attempts.2009, 0) +
+    ifelse(num.year > 2008, qbr.weights[10]*all.qbs$attempts.2008, 0) +
+    ifelse(num.year > 2007, qbr.weights[11]*all.qbs$attempts.2007, 0) + 
+    ifelse(num.year > 2006, qbr.weights[12]*all.qbs$attempts.2006, 0))
+  print(prior)
+  print(aggregated.grades[1])
+  posterior.grades = (prior*1500 + aggregated.grades*total.attempts)/(1500+total.attempts)
+  posterior.qbr = (prior.qbr*1500 + aggregated.qbr*total.attempts)/(1500+total.attempts)
+    
+  df = data.frame("year" = num.year, "name" = names, "age" = age, 
+    "draft" = draft, "season.grade" = grades, "posterior.grade" = posterior.grades, 
+    "posterior.qbr"  = posterior.qbr,
+    "aggregated.grade" = aggregated.grades, "aggregated.qbr"  = aggregated.qbr,
+     "last.attempts" = last.attempts, "curr.attempts" = curr.attempts,
+    "total.attempts" = total.attempts)
+  thesis.data = rbind(thesis.data, df)
+}
+
+#make final models
+qbr.model = lm(grade ~ draft + posterior.qbr + last.attempts, 
+  data = qbr.data, weights = model.weight)
+summary(qbr.model)
+pff.model = lm(grade ~ posterior + draft + last.attempts, 
+    data = final.df,weights = model.weight)
+summary(pff.model)
+
+thesis.data = unique(thesis.data)
+#filter out rookie seasons
+rookie.qbs = thesis.data %>% filter(is.nan(posterior.qbr) & (season.grade != 0 & !is.na(season.grade)))
+rookie.qbs.model = lm(season.grade ~ log(draft), data=rookie.qbs, weights = curr.attempts)
+summary(rookie.qbs.model)
+
+rookie.qbs.all = thesis.data %>% filter(is.nan(posterior.qbr) & curr.attempts!=0)
+rookie.qbs.all$pred = predict(rookie.qbs.model, rookie.qbs.all)
+rookie.qbs.all$posterior = NA
+
+thesis.data = thesis.data %>% filter(!is.nan(posterior.qbr))
+thesis.data$posterior = thesis.data$posterior.grade
+thesis.data$pred = predict(pff.model, thesis.data)
+thesis.data$posterior = thesis.data$posterior.qbr
+thesis.data$pred[which(is.na(thesis.data$pred))] = 
+  predict(qbr.model, thesis.data[which(is.na(thesis.data$pred)),])
+
+#add back in rookie.qbs
+thesis.data = rbind(thesis.data, rookie.qbs.all)
+thesis.data$name = as.character(thesis.data$name)
+thesis.data = thesis.data[order(thesis.data$name, thesis.data$year),]
+write.csv(thesis.data, "qb-predictions.csv")
+```
+

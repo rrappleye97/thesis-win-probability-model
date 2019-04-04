@@ -1,0 +1,1568 @@
+---
+title: "pbp-model"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+library(nnet)
+library(lme4)
+library(MCMCglmm)
+library(gbm)
+library(randomForest)
+library(stringr)
+library(e1071)
+library(gamlss)
+library(fitdistrplus)
+set.seed(60)
+data = readRDS (file = "cleaned-data-part-3.Rda")
+```
+
+#create downs model variables
+#add timeout adjustment 
+```{r}
+#add win probs from nettleton model
+winprobs = read.csv("winprobs.csv")
+data$lock.nettleton.prob = rep(NA, nrow(data))
+data$lock.nettleton.prob[which(data$year == 2017)] = winprobs$win_probs
+#remove turnovers on downs where the team moved the ball more than 25 yards from the current spot
+data = data[-which(data$downs.outcome == "Downs" & data$downs.yrds.gained > 25), ]
+#fix weird issue with NYG-NYJ game
+ny.indices = which(data$HomeTeam == "NYG" & data$AwayTeam == "NYJ")
+data$HomeScore[ny.indices[35:length(ny.indices)]] = data$HomeScore[ny.indices[35:length(ny.indices)]] + 1
+data$hscore[ny.indices] = 20
+data$rscore[ny.indices] = 23
+
+#add score differential, dvoa, line, and qb info from perspective of team that is down
+data$home.o.dvoa = as.numeric(data$home.o.dvoa)
+data$home.d.dvoa = as.numeric(data$home.d.dvoa)
+data$home.st.dvoa = as.numeric(data$home.st.dvoa)
+data$away.o.dvoa = as.numeric(data$away.o.dvoa)
+data$away.d.dvoa = as.numeric(data$away.d.dvoa)
+data$away.st.dvoa = as.numeric(data$away.st.dvoa)
+
+data$pos.o.dvoa = ifelse(data$posteam == data$HomeTeam, data$home.o.dvoa,
+  ifelse(data$posteam == data$AwayTeam, data$away.o.dvoa, NA))
+data$pos.d.dvoa = ifelse(data$posteam == data$HomeTeam, data$home.d.dvoa,
+  ifelse(data$posteam == data$AwayTeam, data$away.d.dvoa, NA))
+data$pos.st.dvoa = ifelse(data$posteam == data$HomeTeam, data$home.st.dvoa,
+  ifelse(data$posteam == data$AwayTeam, data$away.st.dvoa, NA))
+data$def.o.dvoa = ifelse(data$DefensiveTeam == data$HomeTeam, data$home.o.dvoa,
+  ifelse(data$DefensiveTeam == data$AwayTeam, data$away.o.dvoa, NA))
+data$def.d.dvoa = ifelse(data$DefensiveTeam == data$HomeTeam, data$home.d.dvoa,
+  ifelse(data$DefensiveTeam == data$AwayTeam, data$away.d.dvoa, NA))
+data$def.st.dvoa = ifelse(data$DefensiveTeam == data$HomeTeam, data$home.st.dvoa,
+  ifelse(data$DefensiveTeam == data$AwayTeam, data$away.st.dvoa, NA))
+data$pos.line = ifelse(data$posteam == data$HomeTeam, data$vegas.line,
+  ifelse(data$posteam == data$AwayTeam, -1*data$vegas.line, NA))
+data$pos.qb.grade = ifelse(data$posteam == data$HomeTeam, data$home.grade,
+  ifelse(data$posteam == data$AwayTeam, data$away.grade, NA))
+data$def.qb.grade = ifelse(data$DefensiveTeam == data$HomeTeam, data$home.grade,
+  ifelse(data$DefensiveTeam == data$AwayTeam, data$away.grade, NA))
+data$time.group = as.factor(ifelse((data$TimeSecs < 30 & data$TimeSecs > 0) | 
+  data$TimeSecs < -870, 1,
+  ifelse((data$TimeSecs < 60 & data$TimeSecs >= 30) | data$TimeSecs < -840, 2, 
+  ifelse((data$TimeSecs < 120 & data$TimeSecs >= 60) | data$TimeSecs < -780, 3,
+  ifelse((data$TimeSecs < 180 & data$TimeSecs >= 120) | data$TimeSecs < -720, 4,
+  ifelse((data$TimeSecs < 300 & data$TimeSecs >= 180) | data$TimeSecs < -600, 5,
+  ifelse((data$TimeSecs < 1830 & data$TimeSecs > 1800), 6,
+  ifelse((data$TimeSecs < 1860 & data$TimeSecs >= 1830), 7,
+  ifelse((data$TimeSecs < 1920 & data$TimeSecs >= 1860), 8,
+  ifelse((data$TimeSecs < 2100 & data$TimeSecs >= 1920), 9, 10))))))))))
+data$yrdline.group = as.character(ceiling(data$yrdline100/10))
+data$downs.time.elapsed.group = ifelse(data$downs.time.elapsed <= 10, 1, 
+  ifelse(data$downs.time.elapsed <= 20, 2, 
+  ifelse(data$downs.time.elapsed <= 30, 3,
+  ifelse(data$downs.time.elapsed <= 40, 4,
+  ifelse(data$downs.time.elapsed <= 50, 5,
+  ifelse(data$downs.time.elapsed <= 60, 6, 
+  ifelse(data$downs.time.elapsed <= 70, 7,
+  ifelse(data$downs.time.elapsed <= 80, 8, 
+  ifelse(data$downs.time.elapsed <= 90, 9, 
+  ifelse(data$downs.time.elapsed <= 100, 10,  
+  ifelse(data$downs.time.elapsed <= 120, 11,
+  ifelse(data$downs.time.elapsed <= 140, 12, 
+  ifelse(data$downs.time.elapsed <= 160, 13,  
+  ifelse(data$downs.time.elapsed <= 180, 14, 15)))))))))))))) %>% as.factor()
+data$defteam_timeouts_pre = ifelse(data$DefensiveTeam == data$AwayTeam, 
+  data$AwayTimeouts_Remaining_Pre,
+  ifelse(data$DefensiveTeam == data$HomeTeam, data$HomeTimeouts_Remaining_Pre, NA))
+
+#add score.diff variable from perspective of team possessing the football
+data$score.diff = ifelse(data$posteam == data$HomeTeam, data$HomeScore - data$AwayScore,
+  ifelse(data$posteam == data$AwayTeam, data$AwayScore - data$HomeScore, NA))
+data$winning = ifelse(data$score.diff > 0, 1, 
+  ifelse(data$score.diff == 0, 0, -1)) %>% as.factor()
+
+#define comeback score
+data$comeback.score = rep(3, nrow(data))
+data$comeback.score[which(data$score.diff >= 7 & data$TimeSecs <= 480 |
+  data$score.diff >= 10 & data$TimeSecs <= 900 | data$score.diff >= 3 & data$TimeSecs <= 300 |
+  data$score.diff >= 14 & data$TimeSecs <= 1200 | data$score.diff >= 21 & data$TimeSecs <= 1800)] = 2
+data$comeback.score[which(data$score.diff >= 7 & data$TimeSecs <= 300 |
+  data$score.diff >= 10 & data$TimeSecs <= 480 | data$score.diff >= 1 & data$TimeSecs <= 180 |
+  data$score.diff >= 14 & data$TimeSecs <= 600)] = 1
+data$comeback.score[which(data$score.diff <= -7 & ((data$TimeSecs <= 300 & 
+  data$yrdline100 > data$TimeSecs/2) | (data$TimeSecs <= 90 & data$yrdline100 > 10)) |
+  data$score.diff <= -10 & (data$TimeSecs <= 480 | (data$TimeSecs <= 600 & data$yrdline100/3 > 
+  data$TimeSecs - 420)) | 
+  data$score.diff <= -1 & (data$TimeSecs <= 180 | (data$TimeSecs <= 240 & data$yrdline100 > 75)) |
+  data$score.diff <= -17 & data$TimeSecs <= 1200 |
+  data$score.diff == 0 & data$TimeSecs/2 < (data$yrdline100 - 30))] = 4
+data$comeback.score[which(data$score.diff <= -7 & data$TimeSecs <= 180 & 
+  data$yrdline100 > data$TimeSecs/3 |
+  data$score.diff <= -10 & (data$TimeSecs <= 300 | (data$TimeSecs <= 480 & data$yrdline100 > 
+  (data$TimeSecs - 300)/3)) | 
+  data$score.diff <= -1 & (data$TimeSecs <= 120 | (data$TimeSecs <= 180 & data$yrdline100 > 75)) |
+  data$score.diff <= -17 & data$TimeSecs <= 600 |
+  data$score.diff == 0 & data$TimeSecs/3 < (data$yrdline100 - 30))] = 5
+data$comeback.score = as.factor(data$comeback.score)
+
+data$n.plays.until.1st = as.factor(data$n.plays.until.1st)
+data$n.clock.stop.until.1st = as.factor(data$n.clock.stop.until.1st)
+
+data$ot = ifelse(data$TimeSecs < 0 | (data$TimeSecs == 0 & str_detect(data$desc, "15:00")), 1, 0)
+data$ot.kickoff = ifelse(data$TimeSecs <= 0 & str_detect(data$desc, "kicks"), 1, 0)
+data$TimeSecs.adj = ifelse(data$ot == 1, data$TimeSecs + 900, data$TimeSecs)
+data$to.adjusted.time = ifelse(as.numeric(data$comeback.score) > 3, data$TimeSecs.adj + 
+  data$posteam_timeouts_pre*20, ifelse(as.numeric(data$comeback.score) < 3, data$TimeSecs.adj + 
+  data$defteam_timeouts_pre*20, data$TimeSecs.adj))
+data$TimeSecs.ot.zero = data$TimeSecs + 900
+data$one.poss = ifelse(data$score.diff %in% c(-3, -7, -8, 0), 1, 0)
+data$two.poss = ifelse(data$score.diff %in% c(3, 4, 5, 7, 8), 1, 0)
+data$not.close = ifelse(abs(data$score.diff) > 16, 1, 0)
+
+#to.adjusted play length
+play.length = ifelse(data$GameID[c(1:(nrow(data)-1))] == data$GameID[c(2:nrow(data))], 
+  data$to.adjusted.time[c(1:(nrow(data)-1))] - data$to.adjusted.time[c(2:nrow(data))], 
+  ifelse(data$to.adjusted.time[1:(nrow(data)-1)] > 0, data$to.adjusted.time[1:(nrow(data)-1)], NA))
+play.length = ifelse(play.length >= 0, play.length, 
+  ifelse(data$GameID[c(1:(nrow(data)-1))] == data$GameID[c(2:nrow(data))], 
+  data$TimeSecs[c(1:(nrow(data)-1))] - data$TimeSecs[c(2:nrow(data))], 
+  ifelse(data$TimeSecs[1:(nrow(data)-1)] > 0, data$TimeSecs[1:(nrow(data)-1)], NA)))
+data$play.length = c(play.length, NA)
+data$TimeSecs.half.to = ifelse(data$to.adjusted.time > 1800, data$to.adjusted.time - 1800, 
+  data$to.adjusted.time)
+data$TimeSecs.half.to = ifelse(data$TimeSecs.half.to < 0, data$TimeSecs.half.to + 20, data$TimeSecs.half.to)
+
+#add variable for within clock stopping territory
+data$clock.will.stop = ifelse((data$TimeSecs > 1800 & data$TimeSecs < 1920) | 
+  (data$TimeSecs > 0 & data$TimeSecs < 300) | data$TimeSecs < -600, 2, 
+  ifelse((data$TimeSecs >= 1920 & data$TimeSecs < 2040) | 
+  (data$TimeSecs >= 300 & data$TimeSecs < 600) | data$TimeSecs < -420, 1, 0))
+
+#add kickoff variables
+kickoff.indices = which(data$PlayType == "Kickoff")
+data$kickoff = ifelse(c(1:nrow(data)) %in% kickoff.indices, 1, 0)
+no.kickoff = which(data$kickoff[2:341008] == 0 & data$kickoff[3:341009] == 0  &
+  data$PlayType[1:341007] == "Extra Point")
+kickoff.indices = sort(c(kickoff.indices, no.kickoff))
+kickoff.penalties = kickoff.indices[which(kickoff.indices[2:length(kickoff.indices)] - 
+  kickoff.indices[1:(length(kickoff.indices)-1)]==1 & 
+  data$PenalizedTeam[kickoff.indices[1:(length(kickoff.indices)-1)]] != "None")]
+kickoff.indices = kickoff.indices[-which(kickoff.indices %in% kickoff.penalties)]
+
+kickoff.comeback.score = rep(NA, nrow(data))
+kickoff.TimeSecs.half.to = rep(NA, nrow(data))
+kickoff.n.plays.until.kickoff = rep(NA, nrow(data))
+kickoff.clock.will.stop = rep(NA, nrow(data))
+
+prev = 1
+for (i in c(2:length(kickoff.indices))){
+  if(i%%1000 == 0){print(i)}
+  index = kickoff.indices[i]
+  end = index-1
+  kickoff.comeback.score[prev:end] = data$comeback.score[prev]
+  kickoff.TimeSecs.half.to[prev:end] = data$TimeSecs.half.to[prev]
+  kickoff.n.plays.until.kickoff[prev:end] = data$n.plays.until.kickoff[prev]
+  kickoff.clock.will.stop[prev:end] = data$clock.will.stop[prev]
+  prev = index
+}
+
+data$kickoff.comeback.score = kickoff.comeback.score
+data$kickoff.TimeSecs.half.to = kickoff.TimeSecs.half.to
+data$kickoff.n.plays.until.kickoff = kickoff.n.plays.until.kickoff
+data$kickoff.clock.will.stop = kickoff.clock.will.stop
+
+downs.indices = rep(NA, nrow(data))
+for(i in c(2:nrow(data))){
+  if(data$down[i] == "1" & !(data$down[(i-1)] == 1 & str_detect(data$desc[(i-1)], "offset|PENALTY") & 
+    data$posteam[i-1] == data$posteam[i])){
+    downs.indices[i] = 1
+  }
+}
+downs.indices = which(!is.na(downs.indices))
+
+downs.comeback.score = rep(NA, nrow(data))
+downs.TimeSecs.half.to = rep(NA, nrow(data))
+downs.n.plays.until.1st = rep(NA, nrow(data))
+downs.clock.will.stop = rep(NA, nrow(data))
+downs.conversion.by.penalty = rep(NA, nrow(data))
+prev = 2
+for (i in c(2:length(downs.indices))){
+  if(i%%1000 == 0){print(i)}
+  index = downs.indices[i]
+  end = index-1
+  downs.comeback.score[prev:end] = data$comeback.score[prev]
+  downs.TimeSecs.half.to[prev:end] = data$TimeSecs.half.to[prev]
+  downs.n.plays.until.1st[prev:end] = data$n.plays.until.1st[prev]
+  downs.clock.will.stop[prev:end] = data$clock.will.stop[prev]
+  downs.conversion.by.penalty[prev:end] = ifelse(str_detect(data$desc[end], paste("PENALTY on", 
+    data$DefensiveTeam[end])) & data$downs.outcome[end] == "Converted", 1, 0)
+  prev = index
+}
+
+data$downs.comeback.score = downs.comeback.score
+data$downs.TimeSecs.half.to = downs.TimeSecs.half.to
+data$downs.n.plays.until.1st = downs.n.plays.until.1st
+data$downs.clock.will.stop = downs.clock.will.stop
+data$downs.conversion.by.penalty = downs.conversion.by.penalty
+
+data$win.team = ifelse(data$hscore > data$rscore, data$HomeTeam,
+  ifelse(data$hscore == data$rscore, "TIE", data$AwayTeam))
+data$pos.win = ifelse(data$win.team == data$posteam, 1,
+  ifelse(data$win.team == data$DefensiveTeam, 0, NA))
+data$tie = ifelse(data$win.team == "TIE", 1, 0)
+data$pos.home = ifelse(data$posteam == data$HomeTeam, 1, 0)
+
+data$score.change = ifelse(data$posteam == data$HomeTeam, (data$hscore - data$rscore) - data$score.diff, 
+  (data$rscore - data$hscore) - data$score.diff)
+data$score.change.squared = (data$score.change)^2
+data$score.diff.over.sqrt.time = data$score.diff/sqrt(data$TimeSecs.half.to)
+data$pos.line.scaled = data$pos.line*(data$TimeSecs.adj/3600)
+
+receive.2nd.half.kickoff = rep(NA, nrow(data))
+game.indices = which(data$GameID[1:(nrow(data)-1)] != data$GameID[2:nrow(data)])
+prev = 1
+for(i in game.indices){
+  index = min(kickoff.indices[which(kickoff.indices >= prev)])
+  receive.2nd.half.kickoff[prev:i] = ifelse(data$posteam[index] == data$HomeTeam[index], data$AwayTeam[index],
+    data$HomeTeam[index])
+  prev = i+1
+}
+receive.2nd.half.kickoff[which(is.na(receive.2nd.half.kickoff))] = "BAL"
+data$receive.2nd.half.kickoff = receive.2nd.half.kickoff
+data$pos.receive.2nd.half.kickoff = ifelse(data$TimeSecs <= 1800, 0, 
+  ifelse(data$posteam == data$receive.2nd.half.kickoff, 1, -1))
+
+#fix incorrect downs.outcome updates
+data$downs.outcome[which(data$downs.def.td == 1 & data$downs.outcome == "Converted")] = c("Turnover", 
+  "End Half", "Converted",  "Converted", "Converted", "Punt", "Punt", "Punt", "Punt", "Punt", "Punt", "Punt",
+  "Punt", "Punt", "Punt", "Punt", "Punt", "Punt", "Punt", "Punt", "Punt", "Punt", "Punt", "Punt", "Punt", 
+  "Punt", "Punt", "Punt", "Punt")
+data$downs.def.td[which(data$downs.def.td == 1 & data$downs.outcome == "Converted")[3:5]] = 0
+data$downs.off.td[which(data$downs.def.td == 1 & data$downs.outcome == "Converted")[3:5]] = 1
+
+data$downs.off.td[is.na(data$downs.off.td)] = 0
+data$downs.def.td[is.na(data$downs.def.td)] = 0
+
+data$downs.off.td[107136:107140] = 1
+data$downs.outcome[107136:107140] = "Converted"
+
+data$downs.outcome[c(106026:106029, 157194:157198)] = "Converted"
+data$FieldGoalResult[c(106029, 157198, 176068)] = c("NA", "NA", "Blocked")
+data$downs.outcome.fg[which(is.na(data$downs.outcome.fg) & data$downs.outcome == "Field Goal")] = "0"
+
+data$penalty = ifelse(str_detect(data$desc, "PENALTY"), 1, 0)
+data$downs.conversion.by.penalty = ifelse(data$ydstogo == data$yrdline100 & data$downs.off.td != 1 & data$downs.outcome == "Converted", 1, data$downs.conversion.by.penalty)
+
+#don't worry about predicting plays with offsetting penalties because it essentially double counts
+data = data[-which(str_detect(data$desc, "offsetting") & str_detect(data$desc, "No Play")),]
+
+#update downs.outcome to be safety for safety indices
+safety.indices = which(str_detect(data$desc, "SAFETY") & !str_detect(data$desc, "SAFETY NULLIFIED"))
+change.kickoff.to.safety = which(!str_detect(data$kickoff.outcome.model[safety.indices], "Safety"))
+for(i in c(1:length(safety.indices))){
+  start = safety.indices[i] - (as.numeric(data$downs.n.plays.until.1st[safety.indices[i]]) - as.numeric(data$n.plays.until.1st[safety.indices[i]])) 
+  data$downs.outcome[start:(safety.indices[i])] = "Safety"
+  
+  if(i %in% change.kickoff.to.safety){
+    start = safety.indices[i] - (as.numeric(data$kickoff.n.plays.until.kickoff[safety.indices[i]]) - 
+        as.numeric(data$n.plays.until.kickoff[safety.indices[i]]))
+    data$kickoff.outcome.model[start:(safety.indices[i])] = ifelse(data$posteam[start] == data$posteam[safety.indices[i]], "Def Safety", "Off Safety")
+  }
+}
+
+
+ot.indices = which(data$ot == 1 | data$ot.kickoff == 1)
+ot.game.indices = which(data$GameID[ot.indices[2:length(ot.indices)]] != data$GameID[ot.indices[1:(length(ot.indices)-1)]])
+ot.poss.change.indices = which(data$GameID[ot.indices[2:length(ot.indices)]] == data$GameID[ot.indices[1:(length(ot.indices)-1)]] & 
+  data$posteam[ot.indices[2:length(ot.indices)]] != data$posteam[ot.indices[1:(length(ot.indices)-1)]])
+
+data$ot.possession.count = rep(1, nrow(data))
+
+prev = 1
+for(i in c(1:length(ot.game.indices))){
+  print(i)
+  curr = ot.game.indices[i]
+  if(min(ot.poss.change.indices[which(ot.poss.change.indices > prev)]) < curr){
+    start = ot.indices[min(ot.poss.change.indices[which(ot.poss.change.indices > prev)])+1]
+    end = ot.indices[curr]
+    data$ot.possession.count[start:end] = 2
+  }
+  prev = curr
+}
+
+data = data[which(!str_detect(data$desc, " play under review ")),]
+
+#redo kickoff indices now
+kickoff.indices = which(data$PlayType == "Kickoff")
+data$kickoff = ifelse(c(1:nrow(data)) %in% kickoff.indices, 1, 0)
+no.kickoff = which(data$kickoff[2:340703] == 0 & data$kickoff[3:340704] == 0  &
+  data$PlayType[1:340702] == "Extra Point")
+kickoff.indices = sort(c(kickoff.indices, no.kickoff))
+kickoff.penalties = kickoff.indices[which(kickoff.indices[2:length(kickoff.indices)] - 
+  kickoff.indices[1:(length(kickoff.indices)-1)]==1 & 
+  data$PenalizedTeam[kickoff.indices[1:(length(kickoff.indices)-1)]] != "None")]
+kickoff.indices = kickoff.indices[-which(kickoff.indices %in% kickoff.penalties)]
+
+#replacement qb grade is set to 60... seems low 
+
+saveRDS(data, "cleaned-data-part-4.Rda")
+
+```
+
+#build downs models
+#test out whether it makes sense to separate goal line offense from rest of the field offense
+```{r}
+make.glm.downs = function(train.set, formula){
+  output = as.list(c(1:4))
+  for(i in c(1:4)){
+    output[[i]] = multinom(data=train.set[[i]], as.formula(formula))
+  }
+  return(output)
+}
+
+make.mixed.glm.prior = function(k, fix, nu.R, nu.G){
+  I = diag(k-1)
+  J = matrix(rep(1, (k-1)^2), c(k-1, k-1))
+  
+  prior <-list(
+    R = list(
+      V = (1/k)*(I+J), 
+      nu = nu.R, 
+      fix = fix),
+    G=list(G1=list(
+      V = diag(k-1),
+      nu = nu.G)))
+  return(prior)
+}
+
+make.mixed.glm.downs = function(train.set, formula, random.formula, rcov.formula, prior,
+  thin, burnin, nitt){
+  output = as.list(c(1:4))
+  for(i in c(1:4)){
+    output[[i]] = MCMCglmm(
+    as.formula(formula),
+    random = as.formula(random.formula),
+    rcov = as.formula(rcov.formula),
+    data = train.set[[i]],
+    family = "categorical",
+    prior = prior,
+    thin = thin,
+    burnin = burnin,
+    nitt = nitt,
+    pr = TRUE)
+  }
+  return(output)
+}
+
+make.rf.downs = function(train.set, formula, ntree){
+  output = as.list(c(1:4))
+  for(i in c(1:4)){
+    output[[i]] = randomForest(data = train.set[[i]], as.formula(formula), 
+      ntree = ntree)
+  }
+  return(output)
+}
+
+make.gbm.downs = function(train.set, formula, ntree, depth, shrinkage){
+  output = as.list(c(1:4))
+  for(i in c(1:4)){
+    output[[i]] = gbm(as.formula(formula), data = train.set[[i]], n.trees = ntree, 
+      interaction.depth = depth, shrinkage = shrinkage, distribution = "multinomial")
+  }
+  return(output)
+}
+
+make.svm.downs = function(train.set, formula, kernel){
+  output = as.list(c(1:4))
+  for(i in c(1:4)){
+    output[[i]] = svm(as.formula(formula), data = train.set[[i]], kernel = kernel,
+      probability = T)
+  }
+  return(output)
+}
+
+test.predictions.downs = function(models, test.set, n.vars){
+  output = rep(NA, length(models)*4)
+  for(k in c(1:length(models))){
+    type = ifelse(k == 2, "response", "prob")
+    for(down in c(1:4)){
+      model = models[[k]][[down]]
+      pred = NA
+      if(type == "prob"){
+        pred = as.data.frame(predict(model, test.set[[down]], type=type))
+      }
+      if(type == "response"){
+        pred = as.data.frame(predict(model, test.set[[down]], type=type, n.trees = 500))
+        colnames(pred) = str_replace_all(colnames(pred), ".500", "")
+      }
+      if(k==3){
+        pred = predict(model, test.set[[down]], probability=T)
+        pred = as.data.frame(attr(pred, 'probabilities'))
+        cols.vector = c(which(colnames(pred) == "Converted"), 
+          which(colnames(pred) == "Downs"), which(colnames(pred) == "End Half"),
+          which(colnames(pred) == "Field Goal"), which(colnames(pred) == "Punt"),
+          which(colnames(pred) == "Turnover"))
+        pred = pred[, cols.vector]
+      }
+      pred$response = as.factor(test.set[[down]]$downs.outcome)
+      pred$loss = rep(NA, nrow(test.set[[down]]))
+      for(i in c(1:nrow(pred))){
+        pred$loss[i] = log(pred[i,as.numeric(pred$response[i])])
+      }
+      output[((k-1)*4 + down)] = mean(pred$loss)
+      print(mean(pred$loss))
+    }
+  }
+  return(output)
+}
+
+test.predictions.downs.time1 = function(models, test.set, n.vars, resp){
+  output = rep(NA, length(models)*4)
+  for(k in c(1:length(models))){
+    type = ifelse(k == 2, "response", "prob")
+    for(down in c(1:4)){
+      model = models[[k]][[down]]
+      pred = NA
+      if(type == "prob"){
+        pred = as.data.frame(predict(model, test.set[[down]], type=type))
+      }
+      if(type == "response"){
+        pred = as.data.frame(predict(model, test.set[[down]], type=type, n.trees = 500))
+      }
+      if(k==3){
+        pred = predict(model, test.set[[down]], probability=T)
+        pred = as.data.frame(attr(pred, 'probabilities'))
+      }
+      pred = apply(pred, 1, function(x) sample(c(1:n.vars[down]), 1, prob=x[1:n.vars[down]]))
+      response = as.numeric(as.data.frame(test.set[[down]])[,which(colnames(test.set[[down]]) ==
+        resp)])
+      mse = mean((pred-response)^2)
+      output[((k-1)*4 + down)] = mse
+      print(mse)
+    }
+  }
+  return(output)
+}
+
+test.predictions.downs.time = function(models, test.set, n.vars, plot.values){
+  output = rep(NA, length(models))
+  for(k in c(1:length(models))){
+    type = ifelse(k == 2, "link", "prob")
+    model = models[[k]]
+    pred = NA
+    if(type == "prob"){
+      pred = as.data.frame(predict(model, test.set, type=type))
+    }
+    if(type == "link"){
+      pred = as.data.frame(predict(model, test.set, type=type, n.trees = 500))
+      for(i in c(1:n.vars)){
+       pred[,i] = exp(pred[,i])
+      }
+      for(i in c(1:nrow(pred))){
+        total = rowSums(pred[i,])
+        for(j in c(1:n.vars)){
+          pred[i,j] = pred[i,j]/total
+        }
+      }        
+    }
+    if(k==3){
+      pred = predict(model, test.set, probability=T)
+      pred = as.data.frame(attr(pred, 'probabilities'))
+      cols.vector = c(which(colnames(pred) == "Converted"), 
+        which(colnames(pred) == "Downs"), which(colnames(pred) == "End Half"),
+        which(colnames(pred) == "Field Goal"), which(colnames(pred) == "Punt"),
+        which(colnames(pred) == "Turnover"))
+      pred = pred[, cols.vector]
+    }
+    pred$response = as.factor(test.set$downs.time.elapsed.group)
+    pred$loss = rep(NA, nrow(test.set))
+    for(i in c(1:nrow(pred))){
+      pred$loss[i] = log(pred[i,as.numeric(pred$response[i])])
+    }
+    pred$draw = apply(pred, 1, function(x) sample(c(1:n.vars), 1, 
+      prob=x[1:n.vars]))
+    pred$time.pred = apply(pred, 1, function(x) round(ifelse(as.numeric(x[(n.vars+3)]) < 10,
+      runif(1, min=10*(as.numeric(x[n.vars+3])-1)+1, max = 10*as.numeric(x[n.vars+3])),           
+      runif(1, min = 101 + 10*(as.numeric(x)[n.vars+3]-11), 
+      max = 120 + 20*(as.numeric(x[n.vars+3])-11)))))
+    pred$time.pred = ifelse(pred$time.pred < 5, 5, pred$time.pred)
+    pred$mse.response = test.set$downs.time.elapsed
+    pred$mse.loss = apply(pred, 1, function(x) (as.numeric(x[n.vars+4])-as.numeric(x[n.vars+5]))^2)
+    output[k] = mean(pred$mse.loss)
+    hist(plot.values, breaks = 50)
+    hist(pred$time.pred, breaks = 50)
+  }
+return(output)
+}
+
+make.downs.data = function(downs.data, type, cols){
+  set=NA
+  if(type == "train"){
+    set = which(downs.data$year < 2016)
+  } 
+  if(type == "test"){
+    set = which(downs.data$year == 2016)
+  }
+  output = list(c(1:4))
+  for(i in c(1:4)){
+    if(!(i == 1 & type == "test")){
+      output[[i]] = downs.data[set, ] %>% filter(down == i)
+      output[[i]] = output[[i]][,cols]
+    }
+    if(i == 1 & type == "test"){
+      output[[i]] = downs.data[set, ] %>% filter(down == i, ydstogo == 10)
+      output[[i]] = output[[i]][,cols]
+    }
+  }
+  return(output)
+}
+
+make.downs.time.data = function(downs.data, type, cols){
+  set=NA
+  if(type == "train"){
+    set = which(downs.data$year < 2016)
+  } 
+  if(type == "test"){
+    set = which(downs.data$year == 2016)
+  }
+  output = list(c(1:4))
+  for(i in c(1:4)){
+    if(!(i == 1 & type == "test")){
+      output[[i]] = downs.data[set, ] %>% filter(down == i)
+      output[[i]] = output[[i]][,cols]
+    }
+    if(i == 1 & type == "test"){
+      output[[i]] = downs.data[set, ] %>% filter(down == i, ydstogo == 10)
+      output[[i]] = output[[i]][,cols]
+    }
+  }
+  return(output)
+}
+
+test.lm.performance.downs = function(lm, lm1, test.set, plot.values){
+  test = as.data.frame(predict(lm, test.set, se.fit=T))
+  test$z.score = qnorm(runif(nrow(test), 0, 1))
+  test$z.score1 = qnorm(runif(nrow(test), 0, 1))
+  test$pred = test$fit + test$se.fit*test$z.score1 + test$residual.scale*test$z.score
+  test$rng = runif(nrow(test), 0 , 1)
+  test$pred = ifelse(test$pred < 5, ifelse(test$rng < .2, 5, ceiling(5+(test$rng-.8)*10)), test$pred)
+  test$response = test.set$downs.time.elapsed
+  test$mse = (test$pred-test$response)^2
+  print(mean(test$mse))
+  
+  test1 = as.data.frame(predict(lm1, test.set))
+  print(cor(test$fit, test1[,1]))
+  
+  par(mfrow=c(1,2))
+  hist(plot.values, breaks = 50)
+  hist(test$pred, breaks = 50)
+}
+```
+
+#make and test normal downs models
+```{r}
+downs.remove.indices = which(data$TimeSecs < 300 | 
+  (data$TimeSecs < 1980 & data$TimeSecs > 1800) | 
+  str_detect(data$desc, "under review") | 
+  str_detect(data$desc, "END") | 
+  data$desc[1:nrow(data)] == c(data$desc[2:nrow(data)], "NA") |
+  is.na(data$downs.outcome) |
+  is.na(data$home.o.dvoa) | data$downs.outcome == "End Half")
+downs.data = data[-downs.remove.indices,]
+downs.data$downs.outcome = as.factor(downs.data$downs.outcome)
+
+downs.model.cols = which(colnames(data) %in% c("downs.outcome", "pos.o.dvoa", "def.d.dvoa", "pos.qb.grade", "ydstogo", "yrdline.group"))
+
+downs.train.set = make.downs.data(downs.data, "train", downs.model.cols)
+
+downs.formula = "as.factor(downs.outcome) ~ pos.o.dvoa + def.d.dvoa + pos.qb.grade + ydstogo + as.factor(yrdline.group)"
+
+#fit regular glm
+downs.glm.normal = make.glm.downs(downs.train.set, downs.formula)
+
+#fit bayesian mixed glm
+#prior = make.mixed.glm.prior(k = 5, fix = 1, nu.R = k-1, nu.G = k-1)
+#downs.mixed.formula = "downs.outcome ~ -1 + trait + trait:(pos.o.dvoa + def.d.dvoa +
+#  pos.qb.grade + ydstogo)" 
+#downs.mixed.formula.random = "~ us(trait):yrdline.group"
+#downs.mixed.formula.rcov = "~us(trait):units"
+#downs.mixed.glm.normal = make.mixed.glm.downs(downs.train.set, downs.mixed.formula,
+#  downs.mixed.formula.random, downs.mixed.formula.rcov, prior, 1, 1000, 2000)
+
+#fit random forest (don't bother not competitive...)
+#downs.rf.normal = make.rf.downs(downs.train.set, downs.formula, 1000)
+
+#fit svm (run overnight...nonlinear kernel takes long time)
+#downs.svm.normal = make.svm.downs(downs.train.set, downs.formula, kernel = #"radial")
+
+#fit boosted forest
+downs.boosted.normal = make.gbm.downs(downs.train.set, downs.formula, 1000, depth = 2, 
+  shrinkage = .02)
+
+
+###remove post thesis meeting and run mixed glm list function###
+downs.mixed.glm.2nd.normal = MCMCglmm(
+  downs.outcome ~ -1 + trait + trait:(pos.o.dvoa + def.d.dvoa + pos.qb.grade + ydstogo),
+  random = ~ us(trait):yrdline.group,
+  rcov = ~us(trait):units,
+  data = data.train.set.2nd,
+  family = "categorical",
+  prior = make.mixed.glm.prior(k = 5, fix = 1, nu.R = 4, nu.G = 4),
+  thin   = 25,
+  burnin = 5000,
+  nitt   = 30000,
+  pr = TRUE)
+plot(downs.mixed.glm.2nd.normal$Sol[,1:10], auto.layout=F)
+autocorr(downs.mixed.glm.2nd.normal)
+downs.mixed.glm.2nd.normal.results = as.data.frame(downs.mixed.glm.2nd.normal$Sol)
+###############################################################
+
+#test models against each other
+downs.test.set = make.downs.data(downs.data, "test", downs.model.cols)
+
+downs.models = as.list(c(1:2))
+downs.models[[1]] = downs.glm.normal
+downs.models[[2]] = downs.boosted.normal
+
+#simple glm (slightly) outperforms boosted forest except on 4th down...
+downs.model.performance = test.predictions.downs(downs.models, downs.test.set, 5)
+downs.model.performance[seq(1, 4*(length(downs.models)-1)+1, by=4)]
+downs.model.performance[seq(2, 4*(length(downs.models)-1)+2, by=4)]
+downs.model.performance[seq(3, 4*(length(downs.models)-1)+3, by=4)]
+downs.model.performance[seq(4, 4*(length(downs.models)), by=4)]
+
+#get time elapsed for each...split into 4th quarter and rest 
+downs.data = downs.data %>% filter(!is.na(downs.time.elapsed))
+downs.data.4th = downs.data[which(downs.data$TimeSecs <= 900),]
+downs.data.rest = downs.data[which(downs.data$TimeSecs > 900),]
+downs.time.model.cols = which(colnames(downs.data) %in% c("TimeSecs", 
+  "downs.time.elapsed", "downs.outcome", "down", "score.diff", "pos.qb.grade",
+  "downs.time.elapsed.group", "winning"))
+
+```
+
+
+#fit models for downs at end of first half
+```{r}
+downs.data = data[which(data$TimeSecs < 1980 & data$TimeSecs > 1800 &
+  !(str_detect(data$desc, "under review") | 
+  str_detect(data$desc, "END") | 
+  data$desc[1:nrow(data)] == c(data$desc[2:nrow(data)], "NA") |
+  is.na(data$downs.outcome) |
+  is.na(data$home.o.dvoa))),]
+
+downs.data$to.adjusted.time = downs.data$TimeSecs - 1800 + 
+  downs.data$posteam_timeouts_pre*20
+
+downs.model.cols = which(colnames(downs.data) %in% c("downs.outcome", "pos.o.dvoa", "def.d.dvoa", "pos.qb.grade", "ydstogo", "yrdline.group", "score.diff", "to.adjusted.time"))
+downs.train.set = make.downs.data(downs.data, "train", downs.model.cols)
+
+downs.formula = "as.factor(downs.outcome) ~ pos.o.dvoa + def.d.dvoa + pos.qb.grade + ydstogo   + score.diff + to.adjusted.time + as.factor(yrdline.group)"
+
+#fit regular glm
+downs.glm.end.half = make.glm.downs(downs.train.set, downs.formula)
+
+#fit boosted forest
+downs.boosted.end.half = make.gbm.downs(downs.train.set, downs.formula, 1000, depth = 2,
+  shrinkage = .02)
+
+#fit svm
+downs.svm.end.half = make.svm.downs(downs.train.set, downs.formula, kernel = "radial")
+
+#test models against each other
+downs.test.set = make.downs.data(downs.data, "test", downs.model.cols)
+
+#boosted outperforms glm (slightly) which outperforms svm
+downs.model.performance = test.predictions.downs(downs.models, downs.test.set, 6)
+downs.model.performance[seq(1, 4*(length(downs.models)-1)+1, by=4)]
+downs.model.performance[seq(2, 4*(length(downs.models)-1)+2, by=4)]
+downs.model.performance[seq(3, 4*(length(downs.models)-1)+3, by=4)]
+downs.model.performance[seq(4, 4*(length(downs.models)), by=4)]
+
+#time elapsed for end half
+train.set = which(downs.data$year < 2016)
+test.set = which(downs.data$year == 2016)
+downs.time.formula.glm = "downs.time.elapsed.group ~ to.adjusted.time + as.factor(down) + 
+  as.factor(downs.outcome)"
+downs.time.formula = "downs.time.elapsed.group ~ as.factor(downs.outcome) + to.adjusted.time + as.factor(down)"
+downs.time.glm.end.half = multinom(data=downs.data[train.set, ], 
+  as.formula(downs.time.formula.glm))
+downs.time.boosted.end.half = gbm(as.formula(downs.time.formula), data = 
+  downs.data[train.set, ], n.trees = 1000, interaction.depth = 2, 
+  shrinkage = .02, distribution = "multinomial")
+#downs.time.svm.end.half = svm(as.formula(downs.time.formula), data = 
+#  downs.data[train.set, ], kernel = "radial", probability = T)
+
+downs.time.models = as.list(c(1:2))
+downs.time.models[[1]] = downs.time.glm.end.half
+downs.time.models[[2]] = downs.time.boosted.end.half
+#downs.time.models[[3]] = downs.time.svm.end.half
+
+#test predictions for time elapsed
+test.predictions.downs.time(downs.time.models, downs.data[test.set, ], 15,
+  downs.data$downs.time.elapsed[train.set])
+
+#try fitting mixed lm and regular lm and compare to multinomial models
+#evaluating effectiveness of prediction intervals
+downs.time.lm.end.half = lm(data = downs.data[train.set,], downs.time.elapsed ~ TimeSecs + score.diff 
+  + TimeSecs*score.diff + as.factor(down) + as.factor(downs.outcome))
+downs.time.mixed.lm.end.half = lmer(data = downs.data[train.set,], downs.time.elapsed ~ TimeSecs + 
+  score.diff + TimeSecs:score.diff + (1|down) + (1|downs.outcome))
+test.lm.performance.downs(downs.time.lm.end.half, downs.time.mixed.lm.end.half, downs.data[test.set,],
+  downs.data$downs.time.elapsed[train.set])
+qqnorm(downs.time.lm.end.half$residuals)
+qqline(downs.time.lm.end.half$residuals)
+```
+
+
+#fit models for downs at end of game
+```{r}
+downs.data = data[which(data$TimeSecs < 300 & data$TimeSecs > 0 &
+  !(str_detect(data$desc, "under review") | 
+  str_detect(data$desc, "END") | is.na(data$downs.time.elapsed) |
+  data$desc[1:nrow(data)] == c(data$desc[2:nrow(data)], "NA") |
+  is.na(data$downs.outcome) |
+  is.na(data$home.o.dvoa))),]
+
+downs.data$to.adjusted.time = downs.data$TimeSecs + 
+  downs.data$posteam_timeouts_pre*20
+
+downs.model.cols = which(colnames(downs.data) %in% c("downs.outcome", "pos.o.dvoa", "def.d.dvoa", "pos.qb.grade", "ydstogo", "yrdline.group", "score.diff", "to.adjusted.time"))
+downs.train.set = make.downs.data(downs.data, "train", downs.model.cols)
+
+downs.formula = "as.factor(downs.outcome) ~ pos.o.dvoa + def.d.dvoa + pos.qb.grade + ydstogo   + score.diff + to.adjusted.time + as.factor(yrdline.group)"
+
+#fit regular glm
+downs.glm.end.game = make.glm.downs(downs.train.set, downs.formula)
+
+#fit boosted forest
+downs.boosted.end.game = make.gbm.downs(downs.train.set, downs.formula, 1000, depth = 2,
+  shrinkage = .02)
+
+#fit svm
+downs.svm.end.game = make.svm.downs(downs.train.set, downs.formula, kernel = "radial")
+
+#test models against each other
+downs.test.set = make.downs.data(downs.data, "test", downs.model.cols)
+
+downs.models = as.list(c(1:3))
+downs.models[[1]] = downs.glm.end.game
+downs.models[[2]] = downs.boosted.end.game
+downs.models[[3]] = downs.svm.end.game
+
+#boosted tree = by far the best for end game
+downs.model.performance = test.predictions.downs(downs.models, downs.test.set, 6)
+downs.model.performance[seq(1, 4*(length(downs.models)-1)+1, by=4)]
+downs.model.performance[seq(2, 4*(length(downs.models)-1)+2, by=4)]
+downs.model.performance[seq(3, 4*(length(downs.models)-1)+3, by=4)]
+downs.model.performance[seq(4, 4*(length(downs.models)), by=4)]
+
+#time elapsed for end game
+train.set = which(downs.data$year < 2016)
+test.set = which(downs.data$year == 2016)
+downs.time.formula.glm = "downs.time.elapsed.group ~ TimeSecs + as.factor(down) + pos.qb.grade*winning
+  + winning + TimeSecs*winning + posteam_timeouts_pre + posteam_timeouts_pre*winning +   
+  def.team.to.remaining + def.team.to.remaining*winning + as.factor(downs.outcome) + ydstogo + ydstogo*as.factor(down)"
+downs.time.formula = "downs.time.elapsed.group ~ as.factor(downs.outcome) + TimeSecs + as.factor(down) + pos.qb.grade + as.factor(winning) + posteam_timeouts_pre + def.team.to.remaining + ydstogo"
+downs.time.glm.end.game = multinom(data=downs.data[train.set, ], 
+  as.formula(downs.time.formula.glm))
+downs.time.boosted.end.game = gbm(as.formula(downs.time.formula), data = 
+  downs.data[train.set, ], n.trees = 1000, interaction.depth = 2, 
+  shrinkage = .02, distribution = "multinomial")
+#downs.time.svm.end.half = svm(as.formula(downs.time.formula), data = 
+#  downs.data[train.set, ], kernel = "radial", probability = T)
+
+downs.time.models = as.list(c(1:2))
+downs.time.models[[1]] = downs.time.glm.end.game
+downs.time.models[[2]] = downs.time.boosted.end.game
+#downs.time.models[[3]] = downs.time.svm.end.half
+
+#test predictions for time elapsed
+test.predictions.downs.time(downs.time.models, downs.data[test.set, ], 15,
+  downs.data$downs.time.elapsed[train.set])
+
+#try fitting mixed lm and regular lm and compare to multinomial models
+#evaluating effectiveness of prediction intervals
+downs.time.lm.end.game = lm(data = downs.data[train.set,], downs.time.elapsed ~ TimeSecs + as.factor(down) + 
+  pos.qb.grade*winning + winning + TimeSecs*winning + posteam_timeouts_pre + posteam_timeouts_pre*winning +   
+  def.team.to.remaining + def.team.to.remaining*winning + as.factor(downs.outcome) + ydstogo + 
+  ydstogo*as.factor(down))
+downs.time.mixed.lm.end.game = lmer(data = downs.data[train.set,], downs.time.elapsed ~ TimeSecs + 
+  score.diff + ydstogo + TimeSecs:score.diff + (1|down) + (1|downs.outcome) + (1|winning) + pos.qb.grade
+  + def.team.to.remaining + posteam_timeouts_pre)
+test.lm.performance.downs(downs.time.lm.end.game, downs.time.mixed.lm.end.game, downs.data[test.set,],
+  downs.data$downs.time.elapsed[train.set])
+qqnorm(downs.time.lm.end.game$residuals)
+qqline(downs.time.lm.end.game$residuals)
+
+```
+
+
+#downs ot model
+```{r}
+downs.data = data[which(data$TimeSecs < 900  & data$year >= 2012 &
+  !(str_detect(data$desc, "under review") | 
+  str_detect(data$desc, "END") |
+  data$desc[1:nrow(data)] == c(data$desc[2:nrow(data)], "NA") |
+  is.na(data$downs.outcome) |
+  is.na(data$home.o.dvoa))),]
+
+downs.data$ot = ifelse(downs.data$TimeSecs <= 0, 1, 0)
+downs.data$TimeSecs[which(downs.data$ot == 1)] = 
+  downs.data$TimeSecs[which(downs.data$ot == 1)]+900
+downs.data$to.adjusted.time = downs.data$TimeSecs + 
+  downs.data$posteam_timeouts_pre*20
+
+#fix incorrect handling of game winning touchdowns
+downs.data$downs.outcome[which(downs.data$downs.outcome == "End Half" & downs.data$TimeSecs > 90)] = "Converted"
+downs.data$downs.outcome[which(downs.data$downs.outcome == "End Half")[6:7]] = "Converted"
+
+#fix incorrect handling of end of game situations
+downs.data$downs.outcome[which(downs.data$hscore == downs.data$rscore & downs.data$TimeSecs < 90)[c(6:9, 17, 21:22, 27)]] = "End Half"
+
+downs.data = downs.data %>% filter(!is.na(downs.time.elapsed))
+
+downs.model.cols = which(colnames(downs.data) %in% c("downs.outcome", "pos.o.dvoa", "def.d.dvoa", "pos.qb.grade", "ydstogo", "yrdline.group", "ot", "score.diff", "to.adjusted.time"))
+downs.train.set = make.downs.data(downs.data, "train", downs.model.cols)
+
+downs.formula.glm = "as.factor(downs.outcome) ~ pos.o.dvoa + def.d.dvoa + pos.qb.grade + ydstogo + ot + ot*score.diff + score.diff + ot*to.adjusted.time + to.adjusted.time + as.factor(yrdline.group)"
+downs.formula = "as.factor(downs.outcome) ~ pos.o.dvoa + def.d.dvoa + pos.qb.grade + ydstogo + ot + score.diff + to.adjusted.time + as.factor(yrdline.group)"
+
+#fit regular glm
+downs.glm.ot = make.glm.downs(downs.train.set, downs.formula.glm)
+
+#fit boosted forest
+downs.boosted.ot = make.gbm.downs(downs.train.set, downs.formula, 1000, depth = 2,
+  shrinkage = .02)
+
+#fit svm
+#downs.svm.ot = make.svm.downs(downs.train.set, downs.formula, kernel = "radial")
+
+#test models against each other
+downs.test.set = make.downs.data(downs.data, "test", downs.model.cols)
+
+downs.models = as.list(c(1:2))
+downs.models[[1]] = downs.glm.ot
+downs.models[[2]] = downs.boosted.ot
+#downs.models[[3]] = downs.svm.ot
+
+#boosted tree = by far the best for ot
+downs.model.performance = test.predictions.downs(downs.models, downs.test.set, 6)
+downs.model.performance[seq(1, 4*(length(downs.models)-1)+1, by=4)]
+downs.model.performance[seq(2, 4*(length(downs.models)-1)+2, by=4)]
+downs.model.performance[seq(3, 4*(length(downs.models)-1)+3, by=4)]
+downs.model.performance[seq(4, 4*(length(downs.models)), by=4)]
+
+#time elapsed for ot
+train.set = which(downs.data$year < 2016)
+test.set = which(downs.data$year == 2016)
+downs.time.formula.glm = "downs.time.elapsed.group ~ TimeSecs + as.factor(down) + TimeSecs*winning + winning
+  + as.factor(downs.outcome) + ydstogo + ydstogo*as.factor(down)"
+downs.time.formula = "downs.time.elapsed.group ~ as.factor(downs.outcome) + TimeSecs + as.factor(down) + pos.qb.grade + as.factor(winning) + ydstogo"
+downs.time.glm.ot = multinom(data=downs.data[train.set, ], 
+  as.formula(downs.time.formula.glm))
+downs.time.boosted.ot = gbm(as.formula(downs.time.formula), data = 
+  downs.data[train.set, ], n.trees = 1000, interaction.depth = 2, 
+  shrinkage = .02, distribution = "multinomial")
+#downs.time.svm.ot = svm(as.formula(downs.time.formula), data = 
+#  downs.data[train.set, ], kernel = "radial", probability = T)
+
+downs.time.models = as.list(c(1:2))
+downs.time.models[[1]] = downs.time.glm.ot
+downs.time.models[[2]] = downs.time.boosted.ot
+#downs.time.models[[3]] = downs.time.svm.end.half
+
+#test predictions for time elapsed
+test.predictions.downs.time(downs.time.models, downs.data[test.set, ], 15,
+  downs.data$downs.time.elapsed[train.set])
+
+#try fitting mixed lm and regular lm and compare to multinomial models
+#evaluating effectiveness of prediction intervals
+downs.time.lm.ot = lm(data = downs.data[train.set,], downs.time.elapsed ~ TimeSecs + as.factor(down) + 
+  TimeSecs*winning + winning + as.factor(downs.outcome) + ydstogo + ydstogo*as.factor(down))
+downs.time.mixed.lm.ot= lmer(data = downs.data[train.set,], downs.time.elapsed ~ TimeSecs + 
+  ydstogo + (1|down) + (1|downs.outcome) + (1|winning))
+test.lm.performance.downs(downs.time.lm.ot, downs.time.mixed.lm.ot, downs.data[test.set,],
+  downs.data$downs.time.elapsed[train.set])
+qqnorm(downs.time.lm.ot$residuals)
+qqline(downs.time.lm.ot$residuals)
+```
+
+#fit models for time elapsed until the next set of downs
+```{r}
+downs.remove.indices = which(
+  str_detect(data$desc, "under review") | 
+  str_detect(data$desc, "END") | 
+  data$desc[1:nrow(data)] == c(data$desc[2:nrow(data)], "NA") |
+  is.na(data$downs.outcome) |
+  is.na(data$home.o.dvoa) | data$downs.outcome == "End Half")
+downs.data = data[-downs.remove.indices,]
+downs.data$downs.outcome = as.factor(downs.data$downs.outcome)
+
+n.plays.model.cols = which(colnames(downs.data) %in% c("n.plays.until.1st", "downs.outcome", 
+  "ydstogo", "comeback.score", "posteam_timeouts_pre", "defteam_timeouts_pre", "pos.qb.grade",
+  "n.clock.stop.until.1st", "yrdline.group"))
+n.plays.train.set = make.downs.data(downs.data[which(downs.data$downs.outcome == "Converted"),], "train", n.plays.model.cols)
+n.plays.test.set = make.downs.data(downs.data, "test", n.plays.model.cols)
+n.plays.formula = "as.factor(n.plays.until.1st) ~ ydstogo + as.factor(comeback.score)"
+
+#try predicting number of penalties
+penalty.gbm = gbm(penalty ~ downs.outcome + down + yrdline100 + n.plays.until.1st, data=downs.data[downs.data$year < 2016, which(colnames(downs.data) %in% c("downs.outcome", "down", "yrdline100", "penalty", "n.plays.until.1st"))], distribution ="bernoulli", shrinkage = .02, n.trees = 1000, interaction.depth = 1)
+
+pred.gbm = predict(penalty.gbm, data=downs.data[downs.data$year == 2016, ], type = "response", n.trees = 1000)
+loss = mean(ifelse(downs.data$penalty[downs.data$year == 2016] == 1, log(pred.gbm), log(1-pred.gbm)))
+
+#predictions for downs, punts, field goals is 4 - down + 1 + num penalties
+downs.data$four.downs = ifelse(downs.data$downs.outcome == "Punt" | downs.data$downs.outcome == "Field Goal" | downs.data$downs.outcome == "Downs", 1, 0) 
+pred.plays = 5 - as.numeric(downs.data$down[which(downs.data$year == 2016 & downs.data$four.downs == 1)])
+pred.4.down.penalty.rate = predict(penalty.gbm, downs.data[downs.data$year == 2016 & downs.data$four.downs == 1, ], type = "response", n.trees = 1000)
+pred.penalties = rbinom(length(pred.plays), pred.plays, prob = pred.4.down.penalty.rate)
+
+pred.4.downs = pred.plays + pred.penalties
+mse = mean((pred.4.downs - as.numeric(downs.data$n.plays.until.1st[which(downs.data$year == 2016 & downs.data$four.downs == 1)]))^2)
+
+#get predictions for outcomes that could happen on any of 4 downs
+converted.dist = downs.data$down[which(downs.data$year[1:(nrow(downs.data)-1)] < 2016 & downs.data$downs.outcome[1:(nrow(downs.data)-1)] == "Converted" & downs.data$down[2:nrow(downs.data)] == "1" & !((str_detect(data$desc[1:(nrow(downs.data)-1)], paste("PENALTY on", downs.data$posteam[1:(nrow(downs.data)-1)]))) & downs.data$down[1:(nrow(downs.data) - 1)] == "1"))]
+converted.dist = c(length(which(converted.dist == 1))/length(converted.dist), 
+  length(which(converted.dist == 2))/length(converted.dist), length(which(converted.dist == 3))/length(converted.dist), 
+  length(which(converted.dist == 4))/length(converted.dist))
+
+turnover.dist = downs.data$down[which(downs.data$year[1:(nrow(downs.data)-1)] < 2016 & 
+  downs.data$downs.outcome[1:(nrow(downs.data)-1)] == "Turnover" & downs.data$posteam[1:(nrow(downs.data)-1)] != 
+  downs.data$posteam[2:nrow(downs.data)])]
+turnover.dist = c(length(which(turnover.dist == 1))/length(turnover.dist), 
+  length(which(turnover.dist == 2))/length(turnover.dist), length(which(turnover.dist == 3))/length(turnover.dist), 
+  length(which(turnover.dist == 4))/length(turnover.dist))
+
+pred.converted.plays = rep(NA, length(which(downs.data$downs.outcome == "Converted")))
+pred.converted.downs = as.numeric(downs.data$down[which(downs.data$downs.outcome == "Converted")])
+for(i in c(1:length(pred.converted.plays))){
+  down = pred.converted.downs[i]
+  end = 5 - down
+  pred.converted.plays[i] = ifelse(start == 4, sample(c(1:end), 1, prob = converted.dist[down:4]/sum(converted.dist[down:4])), 1)
+}
+
+pred.converted.penalty.rate = predict(penalty.gbm, downs.data[downs.data$year == 2016 & downs.data$downs.outcome == "Converted", ], type = "response", n.trees = 1000)
+pred.penalties = rbinom(length(pred.converted.plays), pred.converted.plays, prob = pred.converted.penalty.rate)
+pred.converted.plays = pred.converted.plays + pred.penalties
+
+mse = mean((pred.converted.plays - as.numeric(downs.data$n.plays.until.1st[downs.data$downs.outcome == "Converted"]))^2)
+hist(as.numeric(downs.data$n.plays.until.1st[downs.data$downs.outcome == "Converted"]) - pred.converted.plays, breaks = 10)
+
+pred.turnover.plays = rep(NA, length(which(downs.data$downs.outcome == "Turnover")))
+for(i in c(1:length(pred.turnover.plays))){
+  down = as.numeric(downs.data$down[which(downs.data$downs.outcome == "Turnover")[i]])
+  end = 5 - down
+  pred.turnover.plays[i] = sample(c(1:end), 1, prob = turnover.dist[down:4]/sum(turnover.dist[down:4]))
+}
+
+pred.turnover.penalty.rate = predict(penalty.gbm, downs.data[downs.data$year == 2016 & downs.data$downs.outcome == "Turnover", ], 
+  type = "response", n.trees = 1000)
+pred.penalties = rbinom(length(pred.turnover.plays), pred.turnover.plays, prob = pred.turnover.penalty.rate)
+
+pred.turnover.plays = pred.turnover.plays + pred.penalties
+
+mse = mean((pred.turnover.plays - as.numeric(downs.data$n.plays.until.1st[downs.data$downs.outcome == "Turnover"]))^2)
+hist(as.numeric(downs.data$n.plays.until.1st[downs.data$downs.outcome == "Turnover"]) - pred.turnover.plays, breaks = 10)
+
+#now created model for ratio of clock stops to running plays
+downs.n.clock.stop.glm = glm(clock.stopped ~ downs.clock.will.stop + downs.n.plays.until.1st + downs.TimeSecs.half.to + 
+  as.factor(downs.comeback.score) + downs.outcome, data = downs.data[downs.data$year < 2016, ])
+
+downs.n.clock.stop.gbm = gbm(clock.stopped ~ downs.clock.will.stop + downs.n.plays.until.1st + downs.TimeSecs.half.to + 
+  as.factor(downs.comeback.score) + downs.outcome, data = downs.data[downs.data$year < 2016, ], n.trees = 1000, shrinkage = .02,
+  interaction.depth = 2, distribution = "bernoulli")
+
+pred.gbm = predict(downs.n.clock.stop.gbm, downs.data[downs.data$year == 2016,], type = "response", n.trees = 1000)
+loss = mean(ifelse(downs.data$clock.stopped[downs.data$year == 2016] == 1, log(pred.gbm), log(1-pred.gbm)))
+
+#test mse after sampling from binomial with ratio specified by model
+pred = rbinom(n = length(which(downs.data$year == 2016)), 
+  size = as.numeric(downs.data$n.plays.until.1st[downs.data$year == 2016]),
+  prob = pred.gbm)
+mse = mean((pred - as.numeric(downs.data$n.clock.stop.until.1st[downs.data$year == 2016]))^2)
+
+#create model for clock stopped play length
+#check which downs.data have play length of 0 (error) and remove them and the next play if they arent a penalty after a stoppage or a spike
+plays.rm = which((downs.data$play.length[2:nrow(downs.data)] == 0  & 
+  !((str_detect(downs.data$desc[2:nrow(downs.data)], "PENALTY") & 
+  downs.data$clock.stopped[1:(nrow(downs.data)-1)] == 1) | 
+  downs.data$PlayType[2:nrow(downs.data)] == "Spike")))
+plays.rm1 = which((downs.data$play.length > 55 & 
+  downs.data$posteam_timeouts_pre - 
+  c(downs.data$posteam_timeouts_pre[2:nrow(downs.data)], 99) >= 1 & 
+  downs.data$defteam_timeouts_pre - 
+  c(downs.data$defteam_timeouts_pre[2:nrow(downs.data)], 99) >= 1) |
+  downs.data$play.length < 0 | downs.data$play.length > 75)
+plays.rm = unique(sort(c(plays.rm+1, plays.rm+2, plays.rm1)))
+downs.data = downs.data[-plays.rm,]
+
+#model for running clock (simple lm outperforms mixed lm)
+train.data = downs.data[which(downs.data$clock.stopped == 0 & downs.data$year < 2016), ]
+mixed.play.length.running = lmer(data = train.data, 
+  play.length ~ ydstogo + (1|comeback.score) + (1|down))
+simple.play.length.running = lm(data = train.data, play.length ~ ydstogo + comeback.score + down)
+test.data = downs.data[which(downs.data$clock.stopped == 0 & downs.data$year == 2016 & 
+  !is.na(downs.data$play.length)), ]
+pred1 = predict(mixed.play.length.running, newdata = test.data)
+pred2 = predict(simple.play.length.running, newdata = test.data)
+mse = c(mean((pred1-test.data$play.length)^2), mean((pred2-test.data$play.length)^2))
+
+#model for stopped clock (simple lm slightly outperforms mixed lm)
+#maybe go back and make sure model knows that punts take a few seconds longer
+train.data = downs.data[which(downs.data$clock.stopped == 1 & downs.data$year < 2016), ]
+mixed.play.length.stopped = lmer(data = train.data, 
+  play.length ~ ydstogo + (1|comeback.score) + (1|down))
+simple.play.length.stopped = lm(data = train.data, play.length ~ ydstogo + comeback.score + down)
+test.data = downs.data[which(downs.data$clock.stopped == 1 & downs.data$year == 2016 & 
+  !is.na(downs.data$play.length)), ]
+pred1 = predict(mixed.play.length.stopped, newdata = test.data)
+pred2 = predict(simple.play.length.stopped, newdata = test.data)
+mse = c(mean((pred1-test.data$play.length)^2), mean((pred2-test.data$play.length)^2))
+```
+
+#model for yards gained
+```{r}
+downs.remove.indices = which(
+  str_detect(data$desc, "under review") | 
+  str_detect(data$desc, "END") | 
+  data$desc[1:nrow(data)] == c(data$desc[2:nrow(data)], "NA") |
+  is.na(data$downs.outcome) |
+  is.na(data$home.o.dvoa) | data$downs.outcome == "End Half" |
+  is.na(data$downs.yrds.gained))
+downs.data = data[-downs.remove.indices,]
+downs.data$downs.outcome = as.factor(downs.data$downs.outcome)
+downs.data$downs.conversion.by.penalty = ifelse(is.na(downs.data$downs.conversion.by.penalty), 0, downs.data$downs.conversion.by.penalty)
+
+#look at distributions
+converted.yrds.gained = as.list(c(1:4))
+converted.yrds.gained[[1]] = as.list(c(1:2))
+converted.yrds.gained[[1]][[1]] = downs.data$downs.yrds.gained[which(downs.data$downs.outcome == 
+  "Converted" & as.numeric(downs.data$down) == 1 & downs.data$ydstogo < 10 & 
+  downs.data$downs.yrds.gained > 0)]
+converted.yrds.gained[[1]][[2]] = downs.data$downs.yrds.gained[which(downs.data$downs.outcome == 
+  "Converted" & as.numeric(downs.data$down) == 1 & downs.data$ydstogo > 10 & 
+  downs.data$downs.yrds.gained > 0)]
+for(i in c(2:4)){
+  converted.yrds.gained[[i]] = downs.data$downs.yrds.gained[which(downs.data$downs.outcome == 
+    "Converted" & as.numeric(downs.data$down) == i & downs.data$downs.yrds.gained > 0)]
+}
+#get best distribution fit for each converted downs dataset...lnorm fits best for all
+test = fitdist(converted.yrds.gained[[1]][[2]], distr="lnorm", method="mle")
+test$loglik
+
+#before fitting converted yards gained lm find probability of conversion by penalty and create distribution
+#downs.data$conversion.by.penalty = ifelse(downs.data$downs.outcome == "Converted" & 
+#  downs.data$downs.yrds.gained < downs.data$ydstogo, 1, 0)
+plot(density(downs.data$downs.yrds.gained[downs.data$downs.conversion.by.penalty == 1 & downs.data$downs.yrds.gained]))
+
+#fit 2 models, one for downs 1-3 and one for 4th
+penalty.converted.yrds.gained.models = as.list(c(1:2))
+penalty.converted.yrds.gained.models[[1]] = lm(downs.yrds.gained ~ sqrt(yrdline100) + 
+  as.factor(down)*ydstogo, data = downs.data[which(downs.data$downs.outcome ==  
+  "Converted" & as.numeric(downs.data$down) < 4 & downs.data$year < 2016 & 
+  downs.data$downs.conversion.by.penalty),])
+plot(density(penalty.converted.yrds.gained.models[[1]]$residuals))
+
+penalty.converted.yrds.gained.models[[2]] = lm(downs.yrds.gained ~ sqrt(yrdline100) + 
+  ydstogo, data = downs.data[which(downs.data$downs.outcome ==  
+  "Converted" & as.numeric(downs.data$down) == 4 & downs.data$year < 2016 & 
+  downs.data$downs.conversion.by.penalty),])
+plot(density(penalty.converted.yrds.gained.models[[2]]$residuals))
+
+#also fit model for probability of a conversion being due to penalty ... glm and gbm were about same
+conversion.by.penalty.prob = glm(downs.conversion.by.penalty ~ as.factor(down)*ydstogo,
+  data = downs.data[which(downs.data$year < 2016 & downs.data$downs.outcome == "Converted" & downs.data$downs.off.td != 1 & downs.data$ydstogo < downs.data$yrdline100),])
+pred = predict(conversion.by.penalty.prob, downs.data[which(downs.data$year == 2016 & 
+  downs.data$downs.outcome == "Converted" & downs.data$downs.off.td != 1),])
+pred = ifelse(downs.data$ydstogo[which(downs.data$year == 2016 & downs.data$downs.outcome == "Converted" & 
+  downs.data$downs.off.td != 1)] >= downs.data$yrdline100[which(downs.data$year == 2016 & 
+  downs.data$downs.outcome == "Converted" & downs.data$downs.off.td != 1)], 1, pred)
+loss = mean(ifelse(downs.data$downs.conversion.by.penalty[which(downs.data$year == 2016 & downs.data$downs.outcome == "Converted" & downs.data$downs.off.td != 1)] == 1, log(pred), log(1-pred)))
+
+#fit regular yards gained lms
+converted.yrds.gained.models = as.list(c(1:4))
+converted.yrds.gained.models[[1]] = as.list(c(1:2))
+
+converted.yrds.gained.models[[1]][[1]] = lm(downs.yrds.gained ~ pos.o.dvoa  + sqrt(yrdline100) + ydstogo, data = downs.data[which(downs.data$downs.outcome ==  "Converted" & as.numeric(downs.data$down) == 1 & downs.data$ydstogo < 10 & downs.data$year < 2016 & !downs.data$conversion.by.penalty),])
+plot(density(converted.yrds.gained.models[[1]][[1]]$residuals))
+
+converted.yrds.gained.models[[1]][[2]] = lm(downs.yrds.gained ~ pos.o.dvoa + def.d.dvoa + sqrt(yrdline100) + ydstogo, data = downs.data[which(downs.data$downs.outcome ==  "Converted" & as.numeric(downs.data$down) == 1 & downs.data$ydstogo > 10 & downs.data$year < 2016 & !downs.data$conversion.by.penalty),])
+plot(density(converted.yrds.gained.models[[1]][[2]]$residuals))
+
+converted.yrds.gained.models[[2]] = lm(downs.yrds.gained ~ pos.o.dvoa + def.d.dvoa + sqrt(yrdline100) + 
+  ydstogo, data = downs.data[which(downs.data$downs.outcome ==  "Converted" & 
+  as.numeric(downs.data$down) == 2 & downs.data$year < 2016 & !downs.data$conversion.by.penalty),])
+plot(density(converted.yrds.gained.models[[2]]$residuals))
+
+converted.yrds.gained.models[[3]] = lm(downs.yrds.gained ~ sqrt(yrdline100) + ydstogo + pos.qb.grade, 
+  data = downs.data[which(downs.data$downs.outcome ==  "Converted" & as.numeric(downs.data$down) == 3 & 
+  downs.data$year < 2016 & !downs.data$conversion.by.penalty),])
+plot(density(converted.yrds.gained.models[[3]]$residuals))
+
+converted.yrds.gained.models[[4]] = lm(downs.yrds.gained ~ pos.o.dvoa + sqrt(yrdline100) +
+  ydstogo, data = downs.data[which(downs.data$downs.outcome ==  "Converted" & as.numeric(downs.data$down) == 
+  4 & downs.data$downs.yrds.gained > 0 & downs.data$year < 2016 & !downs.data$conversion.by.penalty),])
+plot(density(converted.yrds.gained.models[[4]]$residuals))
+
+#now fit other yards gained models
+
+#start with punts...just separate punts into downs 1-3 and 4
+punts.yrds.gained = downs.data$downs.yrds.gained[which(downs.data$downs.outcome == "Punt" & 
+  as.numeric(downs.data$down) == 4 & downs.data$year < 2016)]
+plot(density(punts.yrds.gained))
+
+punts.yrds.gained.models = as.list(c(1:2))
+punts.yrds.gained.models[[1]] = lm(downs.yrds.gained ~ pos.st.dvoa + def.st.dvoa + sqrt(yrdline100) + 
+   ydstogo, data = downs.data[which(downs.data$downs.outcome == "Punt" & as.numeric(downs.data$down) < 4 & 
+  downs.data$year < 2016),])
+plot(density(punts.yrds.gained.models[[1]]$residuals))
+
+punts.yrds.gained.models[[2]] = lm(downs.yrds.gained ~ pos.st.dvoa + def.st.dvoa + sqrt(yrdline100),
+  data = downs.data[which(downs.data$downs.outcome == "Punt" & as.numeric(downs.data$down) == 4 & 
+  downs.data$year < 2016),])
+plot(density(punts.yrds.gained.models[[2]]$residuals))
+
+#now for turnovers...just separate turnovers into downs 1-3 and 4
+turnovers.yrds.gained = downs.data$downs.yrds.gained[which(downs.data$downs.outcome == "Turnover" & 
+  as.numeric(downs.data$down) < 4 & downs.data$year < 2016)]
+plot(density(turnovers.yrds.gained))
+
+turnovers.yrds.gained.models = as.list(c(1:2))
+turnovers.yrds.gained.models[[1]] = lm(downs.yrds.gained ~ pos.qb.grade + sqrt(yrdline100) + ydstogo, 
+  data = downs.data[which(downs.data$downs.outcome == "Turnover" & as.numeric(downs.data$down) < 4 & 
+  downs.data$year < 2016),])
+plot(density(turnovers.yrds.gained.models[[1]]$residuals))
+
+turnovers.yrds.gained.models[[2]] = lm(downs.yrds.gained ~ pos.qb.grade + sqrt(yrdline100) + ydstogo, 
+  data = downs.data[which(downs.data$downs.outcome == "Turnover" & as.numeric(downs.data$down) == 4 & 
+  downs.data$year < 2016),])
+plot(density(turnovers.yrds.gained.models[[2]]$residuals))
+
+#now for downs...maybe separate downs into downs 1-3 and 4...check residuals
+downs.turnover.yrds.gained = downs.data$downs.yrds.gained[which(downs.data$downs.outcome == "Downs" & 
+  as.numeric(downs.data$down) < 4)]
+plot(density(downs.turnover.yrds.gained))
+
+downs.turnover.yrds.gained.models = as.list(c(1:2))
+downs.turnover.yrds.gained.models[[1]] = lm(downs.yrds.gained ~ pos.qb.grade + ydstogo +
+  sqrt(TimeSecs+1)*sqrt(yrdline100), 
+  data = downs.data[which(downs.data$downs.outcome == "Downs" & as.numeric(downs.data$down) < 4 & 
+  downs.data$year < 2016),])
+plot(density(downs.turnover.yrds.gained.models[[1]]$residuals))
+
+downs.turnover.yrds.gained.models[[2]] = lm(downs.yrds.gained ~ ydstogo, 
+  data = downs.data[which(downs.data$downs.outcome == "Downs" & as.numeric(downs.data$down) == 4 & 
+  downs.data$year < 2016),])
+plot(density(downs.turnover.yrds.gained.models[[2]]$residuals))
+
+#now for field goals...index 1 is regular miss for downs 1-3, indices 2-3 are for blocks
+fg.miss.yrds.gained = downs.data$downs.yrds.gained[which(downs.data$downs.outcome == "Field Goal" & 
+  as.numeric(downs.data$down) < 4 & downs.data$downs.outcome.fg.block == "No Good")]
+plot(density(fg.miss.yrds.gained))
+
+fg.yrds.gained.models = as.list(c(1:3))
+fg.yrds.gained.models[[1]] = lm(downs.yrds.gained ~ ydstogo*as.factor(down) + def.d.dvoa, 
+  data = downs.data[which(downs.data$downs.outcome == "Field Goal" & as.numeric(downs.data$down) < 4 & 
+  downs.data$year < 2016 & downs.data$downs.outcome.fg.block == "No Good"),])
+plot(density(fg.yrds.gained.models[[1]]$residuals))
+
+fg.yrds.gained.models[[2]] = lm(downs.yrds.gained ~ ydstogo + def.d.dvoa + sqrt(yrdline100), 
+  data = downs.data[which(downs.data$downs.outcome == "Field Goal" & as.numeric(downs.data$down) < 4 & 
+  downs.data$year < 2016 & downs.data$downs.outcome.fg.block == "Blocked"),])
+plot(density(fg.yrds.gained.models[[2]]$residuals))
+
+fg.yrds.gained.models[[3]] = lm(downs.yrds.gained ~ sqrt(yrdline100), 
+  data = downs.data[which(downs.data$downs.outcome == "Field Goal" & as.numeric(downs.data$down) == 4 & 
+  downs.data$year < 2016 & downs.data$downs.outcome.fg.block == "Blocked"),])
+plot(density(fg.yrds.gained.models[[3]]$residuals))
+
+
+#-----experimenting----see if gamlss with lnorm predicts better than regular lm...it doesnt
+test.data = ...
+test = lm(downs.yrds.gained ~ pos.o.dvoa + def.d.dvoa + pos.qb.grade + ydstogo + yrdline100, data = 
+  test.data[test.data$year < 2016,])
+pred1 = predict(test1, test.data[test.data$year == 2016,])
+mse = mean((pred1 - test.data$downs.yrds.gained[test.data$year == 2016])^2)
+
+plot(density(test1$residuals))
+#fit distribution to residuals...
+length(which(test1$residuals < -20))
+resids = test1$residuals[which(test1$residuals > -20)] + 20
+plot(density(resids))
+
+fit.test = fitdist(resids, distr="lnorm", method="mle")
+fit.test$loglik
+
+
+#store lognorm gamlss here
+
+test = gamlss(downs.yrds.gained ~ pos.o.dvoa + def.d.dvoa + pos.qb.grade + ydstogo + yrdline100, data = 
+  test.data[test.data$year < 2016,], family = "LOGNO")
+pred = predictAll(test, test.data[test.data$year < 2016,], type="response")
+pred = exp(pred[[1]])
+
+#end experimenting
+
+```
+
+#fit model for proportion of downs conversions that lead to touchdowns
+```{r}
+touchdown.data = data[which(data$downs.outcome == "Converted"),]
+
+#gbm far outperforms other models...try different values for shrinkage
+td.model.gbm = gbm(downs.off.td ~ pos.o.dvoa + def.d.dvoa + yrdline100 + as.factor(down) + pos.qb.grade, data = touchdown.data[touchdown.data$year < 2016, which(colnames(touchdown.data) %in% c("downs.off.td", "yrdline100", "pos.o.dvoa", "def.d.dvoa", "down", "pos.qb.grade"))], distribution = "bernoulli", shrinkage = .005, n.trees = 1000, interaction.depth = 2)
+
+pred = predict(td.model.gbm, touchdown.data[touchdown.data$year == 2016,], type = "response", n.trees = 200)
+loss = mean(ifelse(touchdown.data$downs.off.td == 1, log(pred), log(1-pred)))
+mse = mean(ifelse(touchdown.data$downs.off.td == 1, (1-pred)^2, pred^2))
+
+mean.pred = rep(NA, 99)
+for(i in c(1:99)){
+  mean.pred[i] = mean(pred[which(touchdown.data$yrdline100[which(touchdown.data$year == 2016)] == i)])
+}
+plot(mean.pred ~ c(1:99))
+
+#punt td model
+punt.td.data = data[which(data$downs.outcome == "Punt"),]
+punt.model.gbm = gbm(downs.def.td ~ pos.st.dvoa + def.st.dvoa + yrdline100, data = punt.td.data[punt.td.data$year < 2016, which(colnames(punt.td.data) %in% c("downs.def.td", "yrdline100", "pos.st.dvoa", "def.st.dvoa"))], distribution = "bernoulli", shrinkage = .005, n.trees = 1000, interaction.depth = 2)
+
+pred = predict(punt.model.gbm, punt.td.data[punt.td.data$year == 2016,], type = "response", n.trees = 500)
+loss = mean(ifelse(punt.td.data$downs.def.td == 1, log(pred), log(1-pred)))
+mse = mean(ifelse(punt.td.data$downs.def.td == 1, (1-pred)^2, pred^2))
+
+mean.pred = rep(NA, 99)
+for(i in c(1:99)){
+  mean.pred[i] = mean(pred[which(punt.td.data$yrdline100[which(punt.td.data$year == 2016)] == i)])
+}
+plot(mean.pred ~ c(1:99))
+
+#turnover td model
+turnover.td.data = data[which(data$downs.outcome == "Turnover"),]
+turnover.model.gbm = gbm(downs.def.td ~ pos.o.dvoa + def.d.dvoa + sqrt(yrdline100), data = turnover.td.data[turnover.td.data$year < 2016, which(colnames(turnover.td.data) %in% c("downs.def.td", "yrdline100", "pos.o.dvoa", "def.d.dvoa"))], distribution = "bernoulli", shrinkage = .02, n.trees = 1000, interaction.depth = 2)
+
+pred = predict(turnover.model.gbm, turnover.td.data[turnover.td.data$year == 2016,], type = "response", n.trees = 500)
+loss = mean(ifelse(turnover.td.data$downs.def.td == 1, log(pred), log(1-pred)))
+mse = mean(ifelse(turnover.td.data$downs.def.td == 1, (1-pred)^2, pred^2))
+
+mean.pred = rep(NA, 99)
+for(i in c(1:99)){
+  mean.pred[i] = mean(pred[which(turnover.td.data$yrdline100[which(turnover.td.data$year == 2016)] == i)])
+}
+plot(mean.pred ~ c(1:99))
+
+#fg block td model...none are very effective, just output fg.block -> td probability as "model"
+fg.block.td.data = data[which(data$downs.outcome == "Field Goal" & data$downs.outcome.fg.block == "Blocked"),]
+fg.block.td.gbm = gbm(downs.def.td ~ sqrt(yrdline100), data = fg.block.td.data[fg.block.td.data$year < 2016, which(colnames(fg.block.td.data) %in% c("downs.def.td", "yrdline100", "pos.o.dvoa", "def.d.dvoa"))], distribution = "bernoulli", shrinkage = .01, n.trees = 1000, interaction.depth = 2)
+
+pred = predict(fg.block.td.gbm, fg.block.td.data[fg.block.td.data$year == 2016,], type = "response", n.trees = 100)
+loss = mean(ifelse(fg.block.td.data$downs.def.td == 1, log(pred), log(1-pred)))
+mse = mean(ifelse(fg.block.td.data$downs.def.td == 1, (1-pred)^2, pred^2))
+
+mean.pred = rep(NA, 99)
+for(i in c(1:99)){
+  mean.pred[i] = mean(pred[which(fg.block.td.data$yrdline100[which(fg.block.td.data$year == 2016)] == i)])
+}
+plot(mean.pred ~ c(1:99))
+
+#fg.make models
+fg.make.data = data[which(data$downs.outcome == "Field Goal"), which(colnames(data) %in% c("FieldGoalResult", "yrdline100", "downs.yrds.gained", "downs.def.td", "year", "down", "downs.outcome.fg", "downs.outcome.fg.block"))]
+fg.model.gbm = gbm(downs.outcome.fg ~ yrdline100 + as.factor(down), data = fg.make.data[fg.make.data$year < 2016, which(colnames(fg.make.data) %in% c("downs.outcome.fg", "yrdline100", "down"))], distribution = "bernoulli", shrinkage = .01, n.trees = 1000)
+
+pred = predict(fg.model.gbm, fg.make.data[fg.make.data$year == 2016,], type = "response", n.trees = 500)
+loss = mean(ifelse(fg.make.data$downs.outcome.fg == "1", log(pred), log(1-pred)))
+mse = mean(ifelse(fg.make.data$downs.outcome.fg == "1", (1-pred)^2, pred^2))
+
+mean.pred = rep(NA, 55)
+for(i in c(1:55)){
+  mean.pred[i] = mean(pred[which(fg.make.data$yrdline100[which(fg.make.data$year == 2016)] == i)])
+}
+plot(mean.pred ~ c(1:55))
+
+fg.make.data$downs.outcome.fg.block[which(is.na(fg.make.data$downs.outcome.fg.block))] = "Blocked"
+fg.make.data$downs.outcome.fg.block = ifelse(fg.make.data$downs.outcome.fg.block == "Blocked", 1, 0)
+fg.block.model.gbm = gbm(downs.outcome.fg.block ~ yrdline100 + as.factor(down), data = fg.make.data[fg.make.data$year < 2016 & fg.make.data$downs.outcome.fg == "0", which(colnames(fg.make.data) %in% c("downs.outcome.fg.block", "yrdline100", "down"))], distribution = "bernoulli", shrinkage = .01, n.trees = 1000)
+
+pred = predict(fg.block.model.gbm, fg.make.data[fg.make.data$year == 2016 & fg.make.data$downs.outcome.fg == "0",], type = "response", n.trees = 500)
+loss = mean(ifelse(fg.make.data$downs.outcome.fg.block[fg.make.data$year == 2016 & fg.make.data$downs.outcome.fg == "0"] == "Blocked", log(pred), log(1-pred)))
+mse = mean(ifelse(fg.make.data$downs.outcome.fg[fg.make.data$year == 2016 & fg.make.data$downs.outcome.fg == "0"] == "Blocked", (1-pred)^2, pred^2))
+
+mean.pred = rep(NA, 55)
+for(i in c(1:55)){
+  mean.pred[i] = mean(pred[which(fg.make.data$yrdline100[fg.make.data$year == 2016 & fg.make.data$downs.outcome.fg == "0"] == i)])
+}
+plot(mean.pred ~ c(1:55))
+```
+
+kickoff outcome models
+#go back and add mixed models once final model is finished and figured out how to weight probability of defensive/offensive safety for ot and end half situations
+```{r}
+data.kickoffs = data %>% filter(down == 1 & ydstogo == 10 & !is.na(data$kickoff.outcome.model))
+data.kickoffs$kickoff.outcome.model = as.factor(data.kickoffs$kickoff.outcome.model)
+cols = which(colnames(data.kickoffs) %in% c("pos.o.dvoa", "pos.d.dvoa", "posteam", "def.o.dvoa", "def.d.dvoa",
+  "DefensiveTeam", "score.diff", "comeback.score", "TimeSecs.half.to", "pos.line", "desc", 
+  "kickoff.outcome.model", "pos.win"))
+
+kickoffs.simple.lm.normal = multinom(kickoff.outcome.model ~ pos.o.dvoa + pos.d.dvoa + pos.st.dvoa + def.o.dvoa + def.d.dvoa + def.st.dvoa + comeback.score + TimeSecs.half.to + yrdline100, data = data.kickoffs[which(data.kickoffs$year < 2016 & data.kickoffs$TimeSecs > 300 & !(data.kickoffs$TimeSecs > 1800 & data.kickoffs$TimeSecs <= 1980)),])
+
+kickoffs.simple.lm.4th = multinom(kickoff.outcome.model ~ pos.o.dvoa + pos.d.dvoa + pos.st.dvoa + def.o.dvoa + def.d.dvoa + def.st.dvoa + comeback.score + TimeSecs.half.to + yrdline100, data = data.kickoffs[which(data.kickoffs$year < 2016 & data.kickoffs$TimeSecs <= 300 & data.kickoffs$TimeSecs > 0),])
+
+kickoffs.simple.lm.ot = multinom(kickoff.outcome.model ~ pos.o.dvoa + pos.d.dvoa + pos.st.dvoa + 
+  def.o.dvoa + def.d.dvoa + def.st.dvoa + TimeSecs.half.to + yrdline100, data = 
+  data.kickoffs[which(data.kickoffs$year < 2016 & data.kickoffs$TimeSecs < 0),])
+
+kickoffs.simple.lm.end.half = multinom(kickoff.outcome.model ~ pos.o.dvoa + pos.d.dvoa + pos.st.dvoa + 
+  def.o.dvoa + def.d.dvoa + def.st.dvoa + TimeSecs.half.to + yrdline100, data = 
+  data.kickoffs[which(data.kickoffs$year < 2016 & (data.kickoffs$TimeSecs > 1800 & data.kickoffs$TimeSecs <= 1980)),])
+
+#simple.lm performs best
+models = as.list(c(1))
+models[[1]] = kickoffs.simple.lm.ot
+
+
+test.set = data.kickoffs[which(data.kickoffs$year == 2016 & data.kickoffs$TimeSecs <= 300 & data.kickoffs$TimeSecs > 0),]
+
+n.vars = 7
+#test predictions
+for(k in c(1:length(models))){
+  type = ifelse(k == 2, "link", "prob")
+  if(type == "prob"){
+    pred = as.data.frame(predict(models[[k]], test.set, type=type))
+  }
+  if(type == "link"){
+    pred = as.data.frame(predict(models[[k]], test.set, type=type,
+      n.trees = 500))
+    for(i in c(1:n.vars)){
+     pred[,i] = exp(pred[,i])
+    }
+    for(i in c(1:nrow(pred))){
+      total = rowSums(pred[i,])
+      for(j in c(1:n.vars)){
+        pred[i,j] = pred[i,j]/total
+      }
+    }        
+  }
+  if(k==3){
+    pred = predict(models[[k]], newdata = test.set)
+    pred = as.data.frame(attr(pred, 'probabilities'))
+    cols.vector = c(which(colnames(pred) == "Def FG"), 
+      which(colnames(pred) == "Def Safety"), which(colnames(pred) == "Def Touchdown"),
+      which(colnames(pred) == "End Half"), which(colnames(pred) == "Off FG"),
+      which(colnames(pred) == "Off Safety"), which(colnames(pred) == "Off Touchdown"))
+    pred = pred[, cols.vector]
+  }
+  pred$response = as.factor(test.set$kickoff.outcome.model)
+  pred$loss = rep(NA, nrow(test.set))
+  for(i in c(1:nrow(pred))){
+    pred$loss[i] = log(pred[i,as.numeric(pred$response[i])])
+  }
+  print(mean(pred$loss, na.rm = T))
+}
+
+#now get models for the number of plays until kickoff and the number of clock.stops until kickoff...lm beats out gamlss
+cols = which(colnames(data.kickoffs) %in% c("pos.o.dvoa", "pos.d.dvoa", "def.o.dvoa", "def.d.dvoa", "comeback.score", "yrdline100", "TimeSecs.half.to", "n.plays.until.kickoff"))
+n.plays.until.kickoff.lm = lm(n.plays.until.kickoff ~ pos.o.dvoa + pos.d.dvoa + def.o.dvoa + def.d.dvoa + 
+  comeback.score*sqrt(yrdline100) + sqrt(TimeSecs.half.to), data = data.kickoffs[which(data.kickoffs$year < 2016),])
+n.plays.until.kickoff.lognorm = gamlss(n.plays.until.kickoff ~ pos.o.dvoa + pos.d.dvoa + def.o.dvoa + def.d.dvoa + 
+  comeback.score*sqrt(yrdline100) + sqrt(TimeSecs.half.to), data = data.kickoffs[which(data.kickoffs$year < 2016),cols], family = "LOGNO")
+
+pred = predict(n.plays.until.kickoff.lm, data.kickoffs[which(data.kickoffs$year == 2016),])
+pred.ln = predictAll(n.plays.until.kickoff.lognorm, data.kickoffs[which(data.kickoffs$year == 2016),cols], type="response")[[2]]
+mse = mean((pred - data.kickoffs$n.plays.until.kickoff[which(data.kickoffs$year == 2016)])^2)
+
+z.score = runif(length(which(data.kickoffs$year == 2016)), 0, 1) %>% qnorm()
+pred = ifelse(pred < 1, 1, pred)
+dist = exp(log(pred) + z.score*pred.ln)
+dist = ifelse(dist < 1, 1, dist)
+
+#fit distribution to residual plot
+test = fitdist(data.kickoffs$n.plays.until.kickoff, distr="lnorm", method="mle")
+
+plot(density(data.kickoffs$n.plays.until.kickoff))
+plot((dLOGNO(x = c(0:100), mu=2.285266, sigma = .7470352)))
+
+#check to see if yardline has nonlinear effect
+yrdline.residuals = c(11:99)
+for(i in c(1:89)){
+  yrdline.residuals[i] = mean(n.plays.until.kickoff.lm$residuals[which(data.kickoffs$yrdline100[which(data.kickoffs$year < 2016)] == i+10)])
+}
+plot(yrdline.residuals ~ c(11:99))
+
+#check to see if timesec.half.to has nonlinear effect
+time.residuals = c(1:180)
+for(i in c(1:180)){
+  time.residuals[i] = mean(n.plays.until.kickoff.lm$residuals[which(ceiling(data.kickoffs$TimeSecs.half.to[which(data.kickoffs$year < 2016)]/10) == i)])
+}
+plot(time.residuals ~ c(1:180))
+
+n.plays.until.kickoff.mixed.lm = lmer(n.plays.until.kickoff ~ pos.o.dvoa + pos.d.dvoa + def.o.dvoa + def.d.dvoa
+  + yrdline100 + sqrt(TimeSecs.half.to) + (1|comeback.score), data = data.kickoffs[which(data.kickoffs$year < 2016),])
+pred = predict(n.plays.until.kickoff.mixed.lm, data.kickoffs[which(data.kickoffs$year == 2016),])
+mse = mean((pred - data.kickoffs$n.plays.until.kickoff[which(data.kickoffs$year == 2016)])^2)
+
+#predict ratio of clock stops to plays...glm and glmer almost exactly same but gbm beats both...
+n.clock.stop.until.kickoff.glm = glm(clock.stopped ~ kickoff.clock.will.stop + 
+  kickoff.n.plays.until.kickoff + kickoff.TimeSecs.half.to, data = data.kickoffs[data.kickoffs$year < 2016,])
+
+n.clock.stop.until.kickoff.gbm = gbm(clock.stopped ~ kickoff.clock.will.stop + 
+  kickoff.n.plays.until.kickoff + kickoff.TimeSecs.half.to + kickoff.comeback.score, data = data.kickoffs[data.kickoffs$year < 2016,],
+  interaction.depth = 1, shrinkage = .02, n.trees = 1000, distribution = "bernoulli")
+
+pred.glm = predict(n.clock.stop.until.kickoff.glm, data.kickoffs[data.kickoffs$year == 2016,])
+pred.gbm = predict(n.clock.stop.until.kickoff.gbm, data.kickoffs[data.kickoffs$year == 2016,], type = "response", n.trees = 300)
+
+#check time residuals...they are weird but they time improves prediction so I'll leave in
+time.residuals = c(1:180)
+for(i in c(1:180)){
+  time.residuals[i] = mean(n.clock.stop.until.kickoff.glm$residuals[which(ceiling(data.kickoffs$TimeSecs.half.to[which(data.kickoffs$year < 2016)]/10) == i)])
+}
+plot(time.residuals ~ c(1:180))
+
+#check if binomial model performs better than sampling from linear model...it does. by a lot.
+z.scores = runif(length(which(data.kickoffs$year == 2016))) %>% qnorm()
+pred = rbinom(n = length(which(data.kickoffs$year == 2016)), 
+  size = data.kickoffs$n.plays.until.kickoff[data.kickoffs$year == 2016],
+  prob = pred.gbm)
+pred.test = predict(n.clock.stop.until.kickoff.test, data.kickoffs[data.kickoffs$year == 2016,]) + 
+  1.783*z.scores
+mse = mean((pred - (data.kickoffs$n.clock.stop.until.kickoff[data.kickoffs$year == 2016]/data.kickoffs$n.plays.until.kickoff[data.kickoffs$year == 2016]))^2)
+```
+
+#game outcomes model for ties
+```{r}
+#just use boosted model
+data.tie = data[kickoff.indices,]
+data.tie = data.tie[-which(!str_detect(data.win$desc, "kicks")),]
+data.tie$tie = ifelse(data.tie$win.team == "TIE", 1, 0)
+data.tie$ot
+
+tie.model.gbm = gbm(tie ~ yrdline100 + score.diff + ot.kickoff + TimeSecs.ot.zero, data = data.tie[which(data.tie$year < 2016),], shrinkage = .05, n.trees = 1000, distribution = "bernoulli", interaction.depth = 2)
+pred = predict(tie.model.gbm, data = data.tie[which(data.tie$year == 2016),], n.trees = 100, type="response")
+loss = mean(ifelse(data.tie$tie[data.tie$year == 2016] == 1, log(pred), log(1-pred)))
+```
+
+
+#game outcomes
+```{r}
+# get data
+data.win = data[kickoff.indices,]
+data.win = data.win[-which(!str_detect(data.win$desc, "kicks")),]
+data.win = data.win %>% filter(!is.na(data.win$pos.win))
+data.win$sqrt.TimeSecs.half.to = sqrt(data.win$TimeSecs.half.to+1)
+
+data.win$pos.qb.grade = ifelse(is.na(data.win$pos.qb.grade), 72, data.win$pos.qb.grade)
+data.win$def.qb.grade = ifelse(is.na(data.win$def.qb.grade), 72, data.win$def.qb.grade)
+
+data.win.train = data.win[data.win$year < 2016,]
+data.win.test = data.win[data.win$year == 2016,]
+data.win.test$def.qb.grade[1] = 62.13623
+
+#regular glm and gbm win prob models and
+win.model.glm = glm(pos.win ~ pos.line.scaled + pos.o.dvoa*(score.diff.over.sqrt.time) + 
+  def.o.dvoa*(score.diff.over.sqrt.time) + 
+  pos.receive.2nd.half.kickoff*pos.o.dvoa + pos.receive.2nd.half.kickoff*def.o.dvoa, 
+  data=data.win.train[data.win.train$TimeSecs > 600,])
+
+win.model.gbm = gbm(pos.win ~ pos.line.scaled + pos.o.dvoa + def.o.dvoa + pos.qb.grade + def.qb.grade + 
+  def.d.dvoa + pos.d.dvoa + pos.receive.2nd.half.kickoff + score.diff + sqrt(TimeSecs) + posteam_timeouts_pre + defteam_timeouts_pre, data=data.win.train[data.win.train$TimeSecs > 600,], shrinkage = .05, n.trees = 1000, interaction.depth = 2,
+  distribution = "bernoulli")
+
+#create model for mean of normal
+mu = lm(score.change ~ pos.line.scaled + pos.o.dvoa*score.diff + def.o.dvoa*score.diff + 
+  pos.receive.2nd.half.kickoff*pos.o.dvoa + pos.receive.2nd.half.kickoff*def.o.dvoa, data=data.win.train[data.win.train$TimeSecs > 600,])
+summary(mu)
+
+#check normality of mu (must bucket by time since variance will get smaller as game goes on)
+#normality starts to get weird around 10 minutes...basically entirely broken down by 5 minutes left
+time.indices = which(data.win.train$TimeSecs[data.win.train$TimeSecs > 600] > 600 & data.win.train$TimeSecs[data.win.train$TimeSecs > 600] <= 900)
+time.indices1 = which(data.win.train$TimeSecs[data.win.train$TimeSecs > 600] > 1500 & data.win.train$TimeSecs[data.win.train$TimeSecs > 600] <= 1800)
+plot(density(mu$residuals[time.indices]))
+plot(density(mu$residuals[time.indices1]))
+qqnorm(mu$residuals[time.indices])
+
+plot(mu$residuals ~ data.win.train$def.o.dvoa[data.win.train$TimeSecs > 600])
+
+#check out regular lm vs mixed lm...mixed and regular are about the same but mixed doesn't converge
+#model won't converge with slopes for dvoa that vary based on kickoff (why?)
+mu.mixed = lmer(score.change ~ pos.line.scaled + score.diff + pos.o.dvoa:score.diff + pos.d.dvoa:score.diff +
+  (1 | pos.receive.2nd.half.kickoff) + (0 + pos.o.dvoa + def.o.dvoa | pos.receive.2nd.half.kickoff), data=data.win.train[data.win.train$TimeSecs > 600,])
+summary(mu.mixed)
+
+pred = predict(mu, data.win.test[data.win.test$TimeSecs > 600,])
+pred.mixed = predict(mu.mixed, data.win.test[data.win.test$TimeSecs > 600,])
+
+mse = mean(abs((pred - data.win.test$score.change[data.win.test$TimeSecs > 600])))
+
+#make model for std dev...try adding coaches variable to mixed lm 
+cols = which(colnames(data.win.train) %in% c("TimeSecs", "score.change.squared", 'score.diff', "pos.o.dvoa", 
+  "pos.d.dvoa", "def.o.dvoa", "def.d.dvoa", "score.change", "pos.qb.grade", "def.qb.grade", "pos.receive.2nd.half.kickoff", "TimeSecs.half.to", "ot.kickoff", "pos.win", "pos.line.scaled"))
+sigma = lm(abs(score.change)~ sqrt(TimeSecs) + TimeSecs + pos.o.dvoa + def.o.dvoa + pos.d.dvoa + def.d.dvoa + abs(score.diff) + pos.qb.grade*score.diff + def.qb.grade*score.diff, data = data.win.train[data.win.train$TimeSecs > 600,])
+summary(sigma)
+
+sigma.ga = gamlss(abs(score.change)+.01~ sqrt(TimeSecs) + TimeSecs + pos.o.dvoa + def.o.dvoa + pos.d.dvoa + def.d.dvoa + abs(score.diff) + pos.qb.grade*score.diff + def.qb.grade*score.diff, data = data.win.train[data.win.train$TimeSecs > 600,cols], family = "GA")
+summary(sigma.ga)
+
+pred = predict(sigma, data.win.test[data.win.test$TimeSecs > 600,])
+pred.ga = predictAll(sigma.ga, data.win.test[data.win.test$TimeSecs > 600,cols], type = "response")[[1]]
+mse = c(mean(abs((pred - abs(data.win.test$score.change[data.win.test$TimeSecs > 600])))^2),
+  mean(abs((pred.ga - abs(data.win.test$score.change[data.win.test$TimeSecs > 600])))^2))
+
+#explore residuals/goodness of fit for std dev...explore residuals a bit more in coming days
+sigma.ga.residuals = -1*predictAll(sigma.ga, data.win.test[data.win.test$TimeSecs > 600,cols], type = "response")[[1]] + abs(data.win.train$score.change[data.win.train$TimeSecs > 600])
+plot(density(sigma.ga.residuals))
+plot(density(sigma$residuals))
+plot(density(abs(data.win$score.change[data.win.train$TimeSecs > 600])))
+hist(abs(data.win.train$score.change[data.win.train$TimeSecs > 600]), breaks = 30)
+plot(dgamma(c(1:30), shape = 1.41, scale = 6.32))
+
+plot(sigma.ga.residuals ~ data.win.train$TimeSecs[data.win.train$TimeSecs > 600])
+
+#test model...normal model beats out boosted model by a bit and glm by a lot while also giving fuller distribution (define fuller distribution)
+mu.pred = predict(mu, data.win.test[data.win.test$TimeSecs > 600,])
+norm.mu = mu.pred + data.win.test$score.diff[data.win.test$TimeSecs > 600]
+pred.win = pnorm(rep(0, nrow(data.win.test[data.win.test$TimeSecs > 600,])), mean = -1*norm.mu, sd = pred.ga)
+pred.win1 = predict(win.model.glm, data.win.test[data.win.test$TimeSecs > 600,], type = "response")
+pred.win1 = exp(pred.win1)/(1+exp(pred.win1))
+pred.win2 = predict(win.model.gbm, data.win.test[data.win.test$TimeSecs > 600,], type = "response", n.trees = 500)
+win.loss = mean(ifelse(data.win.test$pos.win[data.win.test$TimeSecs > 600] == 1, log(pred.win2), 
+  log(1-pred.win2)))
+win.mse = mean((data.win.test$pos.win[data.win.test$TimeSecs > 600] - pred.win2)^2)
+
+#check how model performs across each bucket...not great but small sample size?
+mean.prob = rep(NA, 10)
+for(i in c(1:10)){
+  prob = seq(.05, .95, by = .1)[i]
+  mean.prob[i] = mean(data.win.test$pos.win[data.win.test$TimeSecs > 600][which(pred.win > prob - .05 & pred.win <= prob + .05)])
+}
+
+#implement boosting model for 4th quarter and ot
+
+#for regular 4th quarter
+win.boosting.4th = gbm(pos.win ~ pos.line.scaled + score.diff + sqrt.TimeSecs.half.to + pos.o.dvoa + def.o.dvoa + pos.d.dvoa + def.d.dvoa + pos.qb.grade + def.qb.grade + posteam_timeouts_pre + defteam_timeouts_pre, data = data.win.train[data.win.train$TimeSecs <= 600 & data.win.train$TimeSecs > 0,], interaction.depth = 2, shrinkage = .02, n.trees = 5000, distribution = "bernoulli")
+
+pred.win = predict(win.boosting.4th, data.win.test[data.win.test$TimeSecs <= 600 & data.win.test$TimeSecs > 0,], type = "response", n.trees = 500)
+loss = mean(ifelse(data.win.test$pos.win[data.win.test$TimeSecs <= 600 & data.win.test$TimeSecs > 0] == 1,
+  log(pred.win), log(1-pred.win)))
+mse = mean(ifelse(data.win.test$pos.win[data.win.test$TimeSecs <= 600 & data.win.test$TimeSecs > 0] == 0, 
+  pred.win^2, (1-pred.win)^2))
+
+#for ot
+win.boosting.ot = gbm(pos.win ~ pos.line.scaled + score.diff + sqrt.TimeSecs.half.to + pos.o.dvoa + def.o.dvoa + pos.d.dvoa + def.d.dvoa + pos.qb.grade + def.qb.grade + posteam_timeouts_pre + defteam_timeouts_pre, data = data.win.train[data.win.train$TimeSecs <= 0,], interaction.depth = 2, shrinkage = .005, n.trees = 1000, distribution = "bernoulli")
+
+pred.win = predict(win.boosting.ot, data.win.test[data.win.test$TimeSecs <= 0,], type = "response", n.trees = 500)
+loss = mean(ifelse(data.win.test$pos.win[data.win.test$TimeSecs <= 0] == 1,log(pred.win), log(1-pred.win)))
+mse = mean(ifelse(data.win.test$pos.win[data.win.test$TimeSecs <= 0] == 0, pred.win^2, (1-pred.win)^2))
+```

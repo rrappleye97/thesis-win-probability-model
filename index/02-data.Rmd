@@ -1,0 +1,159 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+# Data
+
+**1.1 Description of the Play-by-Play Data**  
+The play-by-play dataset comes from the NFL JSON API courtesy of the nflscrapR package, developed by Maksim Horowitz and Ron Yurko, which gives R users the API data in an easily digestible data frame. This package was used to compile a dataset of every play from the 2010 through 2017 NFL seasons. The dataset includes a number of variables that describe the game state including down, yards to go until a first down, yard line, and seconds remaining. The dataset also contains many variables that were helpful when it came to cleaning the data and adding features, including a description of each play that uses specific and consistent verbiage for different types of plays, making it easy to use text matching to search the dataset.
+
+**1.2 Cleaning the Data**  
+Though the nflscrapR package simplified the complexities of pulling data from the NFL JSON API and formatted it nicely in a dataframe, the actual contents of the data was still a bit raw. I matched each game to a dataset of game outcomes and pre-game point spreads^[The pre-game lines were usually compiled on Sunday mornings according to the steward of the website so they will occasionally differ from the closing line] provided by The Prediction Tracker, and looked for discrepancies between the final score as listed in the play-by-play dataset and the point spread dataset to find games and plays in which the score was incremented incorrectly in the play-by-play dataset. I also looked for plays where the number of seconds remaining or the down changed from one play to the next in an incoherent manner to either fix or omit clearly erroneous entries.
+
+**1.3 Incorporating Other Datasets**  
+Though the play-by-play dataset has everything I need as far as describing the game state is concerned, it does not contain any information to describe the teams playing in each game. To remedy this issue I consulted several other datasets. I grabbed grades assigned to quarterbacks from 2008 on by Pro Football Focus (PFF) and pulled age, the pick at which a player was drafted, passing attempts and ESPN’s Total QBR from Pro Football Reference to use in a model that projects the grade a quarterback will receive in a given season^[This model is included in the appendix]. I grabbed the aforementioned point spreads and game outcomes from The Prediction Tracker. I also pulled week by week Defense-adjusted Value Over Average (DVOA) ratings for offense, defense and special teams from Football Outsiders through the use of a web scraping script. Each of these descriptors of team (or player) strength was mapped to the rows of the dataset that contained the appropriate team and week match as either a “Home Team” descriptor or an “Away team” descriptor to avoid situations where descriptors were assigned to the wrong team in a given game. An example of some of the predictors in the data might look something like this:
+
+
+```{r sample-data, results="asis", echo=FALSE, cache = TRUE}
+data = readRDS(file = "/home/guest/thesis-sp19-rappleye-nfl_calculator/data.win.train.Rda")
+output = data[seq(101, 501, by = 100), which(colnames(data) %in% c("home.o.dvoa", "home.d.dvoa", "away.o.dvoa", "away.d.dvoa", "vegas.line", "home.grade", "away.grade"))]
+kable(output, 
+      caption = "Sample Use of Outside Data",
+      longtable = TRUE,
+      booktabs = TRUE)
+```
+
+Where "home.grade" and "away.grade" refer to the projected PFF grades for each team's quarterback. Offensive DVOA is represented by "o.dvoa", with "d.dvoa" doing the same for defensive DVOA for each team. The vegas line, or point spread, is the amount the home team is favored by^[Negative amounts signal that the away team is favored]. These variables are transformed to describe the "possession team"—the team with the ball—and the defensive team when eventually used in models. Additionally, it is important to note that each value of DVOA is given a prior set to the pre-season value of DVOA for the team in question. This prevents early season games from giving extreme values of DVOA. The prior has a weight of four games.  
+
+**1.4 Exploratory Data Analysis**    
+To get a sense of whether or not the assumption made by PFR that the change in score differential at a given point in the game is normally distributed we plot the density of change in score differential for the first five minutes of each quarter. We only sample data points from kickoffs in order to give equal weight to each unique score, game pair in each dataset.  
+
+```{r normality-eda, results="asis", echo=FALSE, cache = TRUE}
+data.win.train = readRDS(file = "/home/guest/thesis-sp19-rappleye-nfl_calculator/data.win.train.Rda")
+time.indices.q4 = which(data.win.train$TimeSecs[data.win.train$TimeSecs > 600] > 600 & data.win.train$TimeSecs[data.win.train$TimeSecs > 600] <= 900)
+time.indices.q3 = which(data.win.train$TimeSecs[data.win.train$TimeSecs > 600] > 1500 & data.win.train$TimeSecs[data.win.train$TimeSecs > 600] <= 1800)
+time.indices.q2 = which(data.win.train$TimeSecs[data.win.train$TimeSecs > 600] > 2400 & data.win.train$TimeSecs[data.win.train$TimeSecs > 600] <= 2700)
+time.indices.q1 = which(data.win.train$TimeSecs[data.win.train$TimeSecs > 600] > 3300 & data.win.train$TimeSecs[data.win.train$TimeSecs > 600] <= 3600)
+
+gridExtra::grid.arrange(
+  ggplot() +
+    geom_density(aes(x = data.win.train$score.change[time.indices.q1]), color = "steelblue") +
+    labs(x = "Change in score differential", title = "Change in score differential", subtitle = "First five minutes of first quarter"),
+  ggplot() +
+    geom_density(aes(x = data.win.train$score.change[time.indices.q2]), color = "darkorange") +
+    labs(x = "Change in score differential", title = "Change in score differential", subtitle = "First five minutes of second quarter"),
+  ggplot() +
+    geom_density(aes(x = data.win.train$score.change[time.indices.q3]), color = "darkred") +
+    labs(x = "Change in score differential", title = "Change in score differential", subtitle = "First five minutes of third quarter"),
+  ggplot() +
+    geom_density(aes(x = data.win.train$score.change[time.indices.q4]), color = "darkgreen") +
+    labs(x = "Change in score differential", title = "Change in score differential", subtitle = "First five minutes of fourth quarter"),
+  ncol = 2)
+```
+
+We next take a look at how the absolute value of change in score differential scales as the game goes on, again sampling only from kickoffs.This should give a sense of whether or not variance scales as the game progresses.
+
+```{r variance-eda, results="asis", echo=FALSE, cache = TRUE}
+data.win.train = readRDS(file = "/home/guest/thesis-sp19-rappleye-nfl_calculator/data.win.train.Rda")
+mean.score.change = rep(NA, 18)
+mean.time = rep(NA, 18)
+for(i in c(1:18)){
+  time.start = 200*(i-1)
+  time.end = 200*i
+  mean.score.change[i] = mean(abs(data.win.train$score.change[which(data.win.train$TimeSecs > time.start & data.win.train$TimeSecs <= time.end)]))
+  mean.time[i] = mean(data.win.train$TimeSecs[which(data.win.train$TimeSecs > time.start & data.win.train$TimeSecs <= time.end)])
+}
+
+ggplot() +
+  geom_line(aes(x = mean.time, y = mean.score.change), color = "steelblue") +
+  labs(x = "Seconds Remaining", y = "Average Score Change", title = "Average Score Change vs. Seconds Remaining", subtitle = "2010 to 2015 NFL data")
+```
+
+We also take a look at the probability of the next scoring play being of a given type based on the yardline the ball is currently positioned at, this time for all first down plays. This will give an idea of whether the relationship between yard line and next scoring event is linear for different events.  
+
+```{r scoring-plays, results="asis", echo=FALSE, cache = TRUE}
+data = readRDS(file = "/home/guest/thesis-sp19-rappleye-nfl_calculator/cleaned-data-part-4.Rda")
+data = data[which(data$year < 2016),]
+off.td.prob = rep(NA, 20)
+off.fg.prob = rep(NA, 20)
+off.safety.prob = rep(NA, 20)
+def.td.prob = rep(NA, 20)
+def.fg.prob = rep(NA, 20)
+def.safety.prob = rep(NA, 20)
+end.half.prob = rep(NA, 20)
+mean.yardline = rep(NA, 20)
+for(i in c(1:20)){
+  yards.start = 5*(i-1)
+  yards.end = 5*i
+  tab = table(data$kickoff.outcome.model[which(data$yrdline100 > yards.start & data$yrdline100 <= yards.end & data$down == 1)])
+  off.td.prob[i] = tab[which(names(tab) == "Off TD")]/sum(tab)
+  off.fg.prob[i] = tab[which(names(tab) == "Off FG")]/sum(tab)
+  off.safety.prob[i] = ifelse(length(which(names(tab) == "Off Safety")) > 0, tab[which(names(tab) == "Off Safety")]/sum(tab), 0)
+  def.td.prob[i] = tab[which(names(tab) == "Def TD")]/sum(tab)
+  def.fg.prob[i] = tab[which(names(tab) == "Def FG")]/sum(tab)
+  def.safety.prob[i] = ifelse(length(which(names(tab) == "Def Safety")) > 0, tab[which(names(tab) == "Def Safety")]/sum(tab), 0)
+  end.half.prob[i] = tab[which(names(tab) == "End Half")]/sum(tab)
+  mean.yardline[i] = mean(data$yrdline100[which(data$yrdline100 > yards.start & data$yrdline100 <= yards.end & data$down == 1)])
+}
+
+score = c(rep("Off TD", 20), rep("Off FG", 20), rep("Off Safety", 20), rep("Def TD", 20), rep("Def FG", 20), rep("Def Safety", 20), rep("End Half", 20))
+probs = c(off.td.prob, off.fg.prob, off.safety.prob, def.td.prob, def.fg.prob, def.safety.prob, end.half.prob)
+
+ggplot() +
+  geom_line(aes(x = rep(mean.yardline, 7), y = probs, color = score)) +
+  labs(x = "Yards from End Zone", y = "Probability of Being Next Scoring Event", title = "P(Next Scoring Event) vs. Yard Line", subtitle = "2010 to 2015 NFL data")
+```
+
+Finally, we'll take a look at how the probability of different outcomes on a given set of downs changes with the yards to go. We'll output graphs for both first and second down.
+
+```{r downs-plays, results="asis", echo=FALSE, cache = TRUE}
+data = readRDS(file = "/home/guest/thesis-sp19-rappleye-nfl_calculator/cleaned-data-part-4.Rda")
+data = data[which(data$year < 2016),]
+conv.prob = rep(NA, 20)
+downs.prob = rep(NA, 20)
+punt.prob = rep(NA, 20)
+turnover.prob = rep(NA, 20)
+fg.prob = rep(NA, 20)
+safety.prob = rep(NA, 20)
+end.half.prob = rep(NA, 20)
+for(i in c(1:20)){
+  tab = table(data$downs.outcome[which(data$ydstogo == i & data$down == 2)])
+  conv.prob[i] = tab[which(names(tab) == "Converted")]/sum(tab)
+  fg.prob[i] = tab[which(names(tab) == "Field Goal")]/sum(tab)
+  safety.prob[i] = ifelse(length(which(names(tab) == "Safety")) > 0, tab[which(names(tab) == "Safety")]/sum(tab), 0)
+  punt.prob[i] = tab[which(names(tab) == "Punt")]/sum(tab)
+  turnover.prob[i] = tab[which(names(tab) == "Turnover")]/sum(tab)
+  downs.prob[i] = tab[which(names(tab) == "Downs")]/sum(tab)
+  end.half.prob[i] = tab[which(names(tab) == "End Half")]/sum(tab)
+}
+
+outcome = c(rep("Conversion", 20), rep("Downs", 20), rep("End Half", 20), rep("Field Goal", 20), rep("Punt", 20), rep("Safety", 20), rep("Turnover", 20))
+probs = c(conv.prob, downs.prob, end.half.prob, fg.prob, punt.prob, safety.prob, turnover.prob)
+
+down.2 = ggplot() +
+  geom_line(aes(x = rep(c(1:20),7), y = probs, color = outcome)) +
+  labs(x = "Yards to Go", y = "Probability of Being Outcome", title = "P(Downs Outcome) vs. Yards to Go on 2nd Down", subtitle = "2010 to 2015 NFL data")
+
+down.2
+
+for(i in c(1:20)){
+  tab = table(data$downs.outcome[which(data$ydstogo == i & data$down == 3)])
+  conv.prob[i] = tab[which(names(tab) == "Converted")]/sum(tab)
+  fg.prob[i] = tab[which(names(tab) == "Field Goal")]/sum(tab)
+  safety.prob[i] = ifelse(length(which(names(tab) == "Safety")) > 0, tab[which(names(tab) == "Safety")]/sum(tab), 0)
+  punt.prob[i] = tab[which(names(tab) == "Punt")]/sum(tab)
+  turnover.prob[i] = tab[which(names(tab) == "Turnover")]/sum(tab)
+  downs.prob[i] = tab[which(names(tab) == "Downs")]/sum(tab)
+  end.half.prob[i] = tab[which(names(tab) == "End Half")]/sum(tab)
+}
+
+outcome = c(rep("Conversion", 20), rep("Downs", 20), rep("End Half", 20), rep("Field Goal", 20), rep("Punt", 20), rep("Safety", 20), rep("Turnover", 20))
+probs = c(conv.prob, downs.prob, end.half.prob, fg.prob, punt.prob, safety.prob, turnover.prob)
+
+down.3 = ggplot() +
+  geom_line(aes(x = rep(c(1:20),7), y = probs, color = outcome)) +
+  labs(x = "Yards to Go", y = "Probability of Being Outcome", title = "P(Downs Outcome) vs. Yards to Go on 3rd Down", subtitle = "2010 to 2015 NFL data")
+
+down.3
+```

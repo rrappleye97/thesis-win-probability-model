@@ -1,0 +1,957 @@
+---
+title: "Output Model Prediction"
+output: html_notebook
+---
+```{r}
+library(dplyr)
+library(nnet)
+library(lme4)
+library(MCMCglmm)
+library(gbm)
+library(randomForest)
+library(stringr)
+library(e1071)
+library(gamlss)
+library(fitdistrplus)
+set.seed(60)
+```
+
+
+```{r}
+get.prediction = function(data, running.play.length.model, stopped.play.length.model, downs.normal.model, 
+  downs.end.half.model, downs.end.game.model, downs.ot.model, downs.n.clock.stops.model, 
+  kickoff.normal.model, kickoff.end.half.model, kickoff.end.game.model, kickoff.ot.model, 
+  kickoff.n.plays.model, kickoff.n.clock.stops.model, mu.model, sigma.model, tie.model, game.4th.model, 
+  game.ot.model, n.kickoff.draws, n.down.draws, n.xp.draws, off.td.model, turnover.td.model, fg.make.model, punt.td.model, fg.block.model, 
+  turnover.dist, converted.dist, safety.dist, downs.penalty.model, turnovers.yrds.gained.models, downs.turnover.yrds.gained.models, 
+  fg.yrds.gained.models, punts.yards.gained.models, penalty.conversion.prob.model, penalty.converted.yrds.gained.models, 
+  n.plays.lnorm.sigma, fg.block.td.model, converted.yrds.gained.models, lg.two.point.success, lg.xp.miss, lg.xp.safety, 
+  min.running.play.length, max.running.play.length,  max.stopped.play.length){
+  
+  #check if I can go straight to game outcome models
+  if(data$kickoff == 1){
+    pred = (get.game.outcome.prediction(data, tie.model, mu.model, sigma.model, game.4th.model, 
+      game.ot.model))
+  } 
+  #next check if I can go to kickoff models
+  if(data$down == 1 & data$ydstogo == 10){
+    pred = (get.kickoff.prediction(data, kickoff.normal.model, kickoff.end.half.model, kickoff.end.game.model, kickoff.ot.model, 
+      kickoff.n.plays.model, kickoff.n.clock.stops.model, running.play.length.model, stopped.play.length.model, n.plays.lnorm.sigma,
+      lg.two.point.success, lg.xp.miss, lg.xp.safety, tie.model, mu.model, sigma.model, game.4th.model, game.ot.model, 
+      n.kickoff.draws, min.running.play.length, max.running.play.length,  max.stopped.play.length))
+  }
+  #next check downs models
+  if(!(data$kickoff == 1 | (data$down == 1 & data$ydstogo == 10))){
+    if(as.numeric(data$down) == 0){ 
+      if(str_detect(data$desc, "extra point|TWO")){
+        pred = get.xp.prediction(data, tie.model, mu.model, sigma.model, game.4th.model, game.ot.model, n.xp.draws)
+      }
+      if(!str_detect(data$desc, "extra point|TWO")){
+        pred = NA
+      }
+    }
+    if(as.numeric(data$down) > 0){
+      pred = (get.downs.prediction(data, running.play.length.model, stopped.play.length.model, downs.normal.model, 
+        downs.end.half.model, downs.end.game.model, downs.ot.model, downs.n.clock.stops.model, 
+        downs.yrds.gained.models, kickoff.normal.model, kickoff.end.half.model, kickoff.end.game.model, kickoff.ot.model, 
+        kickoff.n.plays.model, kickoff.n.clock.stops.model, mu.model, sigma.model, tie.model, game.4th.model, 
+        game.ot.model, n.kickoff.draws, n.down.draws, off.td.model, turnover.td.model, fg.make.model, punt.td.model, 
+        fg.block.model, turnover.dist, converted.dist, safety.dist, downs.penalty.model, fg.block.td.model, converted.yrds.gained.models,
+        turnovers.yrds.gained.models, downs.turnover.yrds.gained.models, fg.yrds.gained.models, punts.yards.gained.models, 
+        penalty.conversion.prob.model, penalty.converted.yrds.gained.models, min.running.play.length, max.running.play.length, 
+        max.stopped.play.length))      
+    }
+  }
+  return(mean(pred))
+}  
+
+#go back and get confidence intervals to output instead of point estimate
+get.game.outcome.prediction = function(data, tie.model, mu.model, sigma.model, game.4th.model, game.ot.model){
+  #get tie probability
+  tie.prob = predict(tie.model, data, type = "response", n.trees = 100)
+  #if sufficient time left get mu/sigma and calculate cdf of normal distribution
+  game.predictions = rep(NA, nrow(data))
+  normal.model.indices = which(data$TimeSecs > 600)
+  
+  if(length(normal.model.indices) > 0){
+    mu = predict(mu.model, data[normal.model.indices,]) + data$score.diff[normal.model.indices]
+    sigma =  predict(sigma.model, newdata = data[normal.model.indices,])
+    game.predictions[normal.model.indices] = (pnorm(0, mean = -1*mu, sd = sigma)*(1-tie.prob[normal.model.indices]) + 
+      .5*tie.prob[normal.model.indices])
+  }
+  
+  gbm.4th.indices = which(data$TimeSecs > 0 & data$TimeSecs <= 600)
+  if(length(gbm.4th.indices) > 0){
+    game.predictions[gbm.4th.indices] = predict(game.4th.model, data[gbm.4th.indices,], type = "response", 
+      n.trees = 500)*(1-tie.prob[gbm.4th.indices])+.5*tie.prob[gbm.4th.indices]
+  }
+  
+  gbm.ot.indices = which(data$TimeSecs <= 0)  
+  if(length(gbm.ot.indices) > 0){
+    game.predictions[gbm.ot.indices] = predict(game.ot.model, data[gbm.ot.indices,], type = "response", 
+      n.trees = 500)*(1-tie.prob[gbm.ot.indices])+.5*tie.prob[gbm.ot.indices]
+  }
+  
+  
+  return(game.predictions)
+}
+
+
+get.kickoff.prediction = function(data, kickoff.normal.model, kickoff.end.half.model, kickoff.end.game.model, kickoff.ot.model, 
+  kickoff.n.plays.model, kickoff.n.clock.stops.model, running.play.length.model, stopped.play.length.model, n.plays.lnorm.sigma,
+  lg.two.point.success, lg.xp.miss, lg.xp.safety, tie.model, mu.model, sigma.model, game.4th.model, game.ot.model, 
+  n.kickoff.draws, min.running.play.length, max.running.play.length,  max.stopped.play.length){
+  #get outcome
+  outcome = NA
+  
+  if(nrow(data) > 1){
+    draws = n.kickoff.draws/20
+    outcome = rep(NA, nrow(data) * draws)
+    normal.indices = which(data$TimeSecs > 300 & !(data$TimeSecs > 1800 & data$TimeSecs <= 1980))
+    end.half.indices = which(data$TimeSecs > 1800 & data$TimeSecs <= 1980)
+    end.game.indices = which(data$TimeSecs <= 300 & data$TimeSecs > 0)
+    ot.indices = which(data$TimeSecs <= 0)
+    
+    expanded.normal.indices = which(ceiling(c(1:(draws*nrow(data)))/20) %in% normal.indices)
+    expanded.end.half.indices = which(ceiling(c(1:(draws*nrow(data)))/20) %in% end.half.indices)
+    expanded.end.game.indices = which(ceiling(c(1:(draws*nrow(data)))/20) %in% end.game.indices)
+    expanded.ot.indices = which(ceiling(c(1:(draws*nrow(data)))/20) %in% ot.indices)
+    
+    outcome[expanded.normal.indices] = parse.kickoff.predictions(data[normal.indices,], kickoff.normal.model, draws)
+    outcome[expanded.end.half.indices] = parse.kickoff.predictions(data[end.half.indices,], kickoff.end.half.model, draws)
+    outcome[expanded.end.game.indices] = parse.kickoff.predictions(data[end.game.indices,], kickoff.end.game.model, draws)
+    outcome[expanded.ot.indices] = parse.kickoff.predictions(data[ot.indices,], kickoff.ot.model, draws)
+    data = data[rep(seq_len(nrow(data)), each=draws),]
+  }
+  
+  if(nrow(data) == 1){
+    if(data$TimeSecs > 300 & !(data$TimeSecs > 1800 & data$TimeSecs <= 1980)){
+      outcome = parse.kickoff.predictions(data, kickoff.normal.model, n.kickoff.draws)
+    }
+    if(data$TimeSecs > 1800 & data$TimeSecs <= 1980){
+      outcome = parse.kickoff.predictions(data, kickoff.end.half.model, n.kickoff.draws)
+    }
+    if(data$TimeSecs <= 300 & data$TimeSecs > 0){
+      outcome = parse.kickoff.predictions(data, kickoff.end.game.model, n.kickoff.draws)
+    }
+    if(data$TimeSecs <= 0){
+      outcome = parse.kickoff.predictions(data, kickoff.ot.model, n.kickoff.draws)
+    }
+    data = data[rep(seq_len(nrow(data)), each=n.kickoff.draws),]
+  }
+  
+  
+  
+  data$kickoff.outcome.model = outcome
+  game.predictions = rep(NA, length(outcome))
+  
+  get.new.data = ifelse((outcome == "End Half" & data$ot == 1) | (outcome == "End Half" & data$score.diff != 0 & 
+    data$TimeSecs <= 1800), 0, 1)
+  
+  data = change.data.kickoffs(data, outcome, kickoff.n.plays.model, kickoff.n.clock.stop.model, n.plays.lnorm.sigma, 
+    running.play.length.model, stopped.play.length.model, lg.xp.miss, lg.two.point.success, lg.xp.safety, min.running.play.length,
+    max.running.play.length, max.stopped.play.length, get.new.data)
+  
+  if(length(unique(data$pos.o.dvoa)) == 1){
+    print("no possession change")
+  }
+  
+  game.predictions = ifelse(outcome == "End Half" & data$ot == 1, 0.5,
+    ifelse(outcome == "End Half" & data$score.diff > 0 & data$TimeSecs <= 1800 & get.new.data == 0, 1,
+    ifelse(outcome == "End Half" & data$score.diff < 0 & data$TimeSecs <= 1800 & get.new.data == 0, 0, NA)))
+  game.predictions[which(is.na(game.predictions))] = get.game.outcome.prediction(data[which(is.na(game.predictions)),], tie.model, mu.model, sigma.model, 
+    game.4th.model, game.ot.model)
+  if("downs.possession.change" %in% colnames(data)){
+    game.predictions[which(data$downs.possession.change == 1)] = 1-game.predictions[which(data$downs.possession.change == 1)]
+  }
+  game.predictions[which(data$possession.change == 1)] = 1-game.predictions[which(data$possession.change == 1)]
+  
+  return(game.predictions)
+}
+
+parse.kickoff.predictions = function(data, model, n.kickoff.draws){
+  output = NA
+  if(nrow(data) == 1){
+    pred = predict(model, data, type="probs")
+    for(i in c(2:length(pred))){
+      pred[i] = pred[i-1]+ pred[i]
+    }
+    draw = runif(n.kickoff.draws, 0, 1)
+    output = c(1:n.kickoff.draws)
+    for (i in c(1:n.kickoff.draws)){
+      output[i] = names(pred)[min(which(pred > draw[i]))]
+    }
+  }
+  if(nrow(data) > 1){
+    output = rep(NA, nrow(data)*n.kickoff.draws)
+    pred = as.data.frame(predict(model, data, type="probs"))
+    for(i in c(1:nrow(data))){
+      start = n.kickoff.draws * (i-1) + 1
+      end = n.kickoff.draws * i
+      if(length(which(is.na(pred[i,]))) > 0){
+        print(data[i,])
+      }
+      output[start:end] = sample(colnames(pred), n.kickoff.draws, prob = pred[i,], replace = TRUE)
+    }
+  }
+  return(output)
+}
+
+change.data.kickoffs = function(data, outcome, kickoff.n.plays.model, kickoff.n.clock.stop.model, n.plays.lnorm.sigma, running.play.length.model, stopped.play.length.model, lg.xp.miss, lg.two.point.success, lg.xp.safety, min.running.play.length, max.running.play.length, max.stopped.play.length, get.new.data){
+  
+  off.td.indices = which(outcome == "Off TD")
+  def.td.indices = which(outcome == "Def TD")
+  off.fg.indices = which(outcome == "Off FG")
+  def.fg.indices = which(outcome == "Def FG")
+  off.safety.indices = which(outcome == "Off Safety")
+  def.safety.indices = which(outcome == "Def Safety")
+  end.half.indices = which(outcome == "End Half" & get.new.data == 1)
+  
+  #change score
+  td.indices.draw = runif(length(off.td.indices), 0, 1)
+  data$score.diff[off.td.indices] = ifelse(go.for.two(data$score.diff[off.td.indices], data$TimeSecs[off.td.indices]),
+    ifelse(td.indices.draw < lg.two.point.success, data$score.diff[off.td.indices] + 8,
+    ifelse(td.indices.draw > (1- lg.xp.safety), data$score.diff[off.td.indices] + 4, data$score.diff[off.td.indices] + 6)),
+    ifelse(td.indices.draw < lg.xp.safety, data$score.diff[off.td.indices] + 4,
+    ifelse(td.indices.draw > (1-lg.xp.miss), data$score.diff[off.td.indices] + 6, data$score.diff[off.td.indices] + 7)))
+  
+  td.indices.draw = runif(length(def.td.indices), 0, 1)
+  data$score.diff[def.td.indices] = ifelse(go.for.two(-1*data$score.diff[def.td.indices], data$TimeSecs[def.td.indices]),
+    ifelse(td.indices.draw < lg.two.point.success, data$score.diff[def.td.indices] - 8,
+    ifelse(td.indices.draw > (1- lg.xp.safety), data$score.diff[def.td.indices] - 4, data$score.diff[def.td.indices] - 6)),
+    ifelse(td.indices.draw < lg.xp.safety, data$score.diff[def.td.indices] - 4,
+    ifelse(td.indices.draw > (1-lg.xp.miss), data$score.diff[def.td.indices] - 6, data$score.diff[def.td.indices] - 7)))
+  
+  data$score.diff[off.fg.indices] = (data$score.diff[off.fg.indices] + 3)
+  data$score.diff[def.fg.indices] = (data$score.diff[def.fg.indices] - 3)
+  
+  data$score.diff[off.safety.indices] = (data$score.diff[off.safety.indices] + 2)
+  data$score.diff[def.safety.indices] = (data$score.diff[def.safety.indices] - 2)
+
+  #update time
+  time = rep(9999, length(outcome))
+  indices = c(1:length(outcome))
+  if(length(end.half.indices) != 0){
+    indices = indices[-end.half.indices]
+  }
+  iter = 1
+  while(length(indices) > 0){
+    if(iter >= 10){
+      outcome[indices] = "End Half"
+      break
+    }
+    time[indices] = get.kickoff.time.elapsed.prediction(data[indices,], outcome[indices], kickoff.n.plays.model, 
+      kickoff.n.clock.stops.model, n.plays.lnorm.sigma, running.play.length, stopped.play.length, min.running.play.length, 
+      max.running.play.length, max.stopped.play.length)
+    indices = indices[which((data$TimeSecs[indices] > 1800 & data$TimeSecs[indices] - time[indices] < 1800) | 
+      (data$TimeSecs[indices] > 0 & data$TimeSecs[indices] - time[indices] < 0) | data$TimeSecs[indices] - time[indices] < -900)]
+    iter = iter + 1
+  }
+  
+  #refresh for outcomes that may have changed
+  end.half.indices = which(outcome == "End Half")
+  
+  indices = c(1:length(outcome))
+  if(length(end.half.indices) != 0){
+    indices = indices[-end.half.indices]
+  }
+  data$TimeSecs[indices] = data$TimeSecs[indices] - time[indices]
+  data$TimeSecs.adj[indices] = data$TimeSecs.adj[indices] - time[indices]
+  data$TimeSecs.half.to[indices] = data$TimeSecs.half.to[indices] - time[indices]
+  data$TimeSecs.ot.zero[indices] = data$TimeSecs.ot.zero[indices] - time[indices]
+  
+  #update time for sets of downs that end with the half
+  data$TimeSecs[end.half.indices] = ifelse(data$TimeSecs[end.half.indices] > 1800, 1800, 0)
+  data$TimeSecs.adj[end.half.indices] = ifelse(data$TimeSecs[end.half.indices] > 1800, 1800, 0)
+  data$TimeSecs.half.to[end.half.indices] = ifelse(data$TimeSecs[end.half.indices] > 1800, 1800, 0) 
+  data$TimeSecs.ot.zero[end.half.indices] = ifelse(data$TimeSecs[end.half.indices] > 1800, 1800, 0)
+  #overwrite end half indices of games going to overtime
+  ot.indices = which(outcome == "End Half" & data$TimeSecs <= 1800 & data$TimeSecs > 0 & data$score.diff == 0)
+  data$ot[ot.indices] = 1
+  data$ot.kickoff[ot.indices] = 1
+  data$TimeSecs[ot.indices] = -300 
+  data$TimeSecs.adj[ot.indices] = 600  
+  data$TimeSecs.half.to[ot.indices] = 600  
+  data$TimeSecs.ot.zero[ot.indices] = 600 
+  
+  #update possession
+  possession.indices = which(str_detect(outcome, "Off FG|Off TD|Def Safety") | 
+    (outcome == "End Half" & data$pos.receive.2nd.half.kickoff == -1))
+  
+  #add half of ot.indices to possession.indices
+  ot.draw = runif(length(ot.indices), 0, 1)
+  possession.indices = sort(c(possession.indices, ot.indices[which(ot.draw > .5)]))
+  
+  def.o.dvoa = data$pos.o.dvoa[possession.indices]
+  def.d.dvoa = data$pos.d.dvoa[possession.indices]
+  def.st.dvoa = data$pos.st.dvoa[possession.indices]
+  def.qb.grade = data$pos.qb.grade[possession.indices]
+  def.timeouts = data$defteam_timeouts_pre[possession.indices]
+  
+  data$pos.o.dvoa[possession.indices] = data$def.o.dvoa[possession.indices]
+  data$pos.d.dvoa[possession.indices] = data$def.d.dvoa[possession.indices]
+  data$pos.st.dvoa[possession.indices] = data$def.st.dvoa[possession.indices]
+  data$pos.qb.grade[possession.indices] = data$def.qb.grade[possession.indices]
+  data$def.o.dvoa[possession.indices] = def.o.dvoa
+  data$def.d.dvoa[possession.indices] = def.d.dvoa
+  data$def.st.dvoa[possession.indices] = def.st.dvoa
+  data$def.qb.grade[possession.indices] = def.qb.grade
+  data$defteam_timeouts_pre[possession.indices] = data$posteam_timeouts_pre[possession.indices]
+  data$posteam_timeouts_pre[possession.indices] = def.timeouts
+  data$pos.receive.2nd.half.kickoff[possession.indices] = -1*data$pos.receive.2nd.half.kickoff[possession.indices]
+  data$pos.line[possession.indices] = -1*data$pos.line[possession.indices]
+  
+  data$pos.line.scaled = data$pos.line*(data$TimeSecs.adj/3600)
+  data$score.diff[possession.indices] = -1*data$score.diff[possession.indices]
+  
+  
+  data$possession.change = rep(0, nrow(data))
+  data$possession.change[possession.indices] = 1
+  data$sqrt.TimeSecs.half.to = ifelse(data$TimeSecs.half.to < 0, 0, sqrt(data$TimeSecs.half.to))
+  return(data)
+}
+
+get.kickoff.time.elapsed.prediction = function(data, outcome, kickoff.n.plays.model, kickoff.n.clock.stops.model, n.plays.lnorm.sigma, running.play.length, stopped.play.length, min.running.play.length, max.running.play.length, max.stopped.play.length){
+  #first get predicted number of plays
+  n.plays = rep(NA, length(outcome))
+  indices = c(1:length(outcome))
+  while(length(indices) > 0){
+    n.plays[indices] = predict(kickoff.n.plays.model, data[indices,])
+    #add variance to prediction by transforming mean to log scale and adding random z.score * sigma
+    #also try regular draw from normal distribution
+    #make min predicted plays = 4 (predictions under this seem unreasonable)
+    n.plays[indices] = ifelse(n.plays[indices] < 4, 4, n.plays[indices])
+    #n.plays[indices] = ifelse(is.nan(n.plays[indices]), 10, n.plays[indices])
+    z.score = runif(length(indices), 0, 1) %>% qnorm()
+    n.plays[indices] = exp(log(n.plays[indices]) + z.score * n.plays.lnorm.sigma) %>% round(0) 
+    indices = which(n.plays > 100 | n.plays < 1)
+  }
+  data$kickoff.n.plays.until.kickoff = n.plays
+  
+  #now get predicted number of stops
+  n.clock.stops = rep(0, length(outcome))
+  indices = c(1:length(outcome))
+  while(length(indices) > 0){
+    n.clock.stops[indices] = rbinom(n = length(indices), size = n.plays[indices], prob = predict(kickoff.n.clock.stops.model, 
+      data[indices,], type = "response", n.trees = 300))
+    indices = which(n.clock.stops < 1)
+  }
+  
+  n.running.plays = n.plays - n.clock.stops
+  
+  #then make draws for running plays and draws for stopped plays and sum to get total time
+  running.play.length.pred = predict(running.play.length.model, data)
+  stopped.play.length.pred = predict(stopped.play.length.model, data)
+  
+  sdev.running = sd(running.play.length.model$residuals)
+  sdev.stopped = sd(stopped.play.length.model$residuals)
+  
+  #restrict draws to acceptable play lengths
+  min.running.draw = pnorm((min.running.play.length - running.play.length.pred)/sdev.running)
+  min.stopped.draw = pnorm((1 - stopped.play.length.pred)/sdev.running)
+  max.running.draw = pnorm((max.running.play.length - running.play.length.pred)/sdev.running)
+  max.stopped.draw = pnorm((max.stopped.play.length - stopped.play.length.pred)/sdev.running)
+  
+  #maybe get variance by utilizing sum of normals...
+  
+  #get time mean
+  time = running.play.length.pred * n.running.plays + stopped.play.length.pred * n.clock.stops  
+  
+  for(i in c(1:length(outcome))){
+    if(n.running.plays[i] != 0){
+      z.scores.running = runif(n.running.plays[i], min.running.draw[i], max.running.draw[i]) %>% qnorm()
+      time[i] = time[i] + sum(z.scores.running)*sdev.running
+    }
+    if(n.clock.stops[i] != 0){
+      z.scores.stopped = runif(n.clock.stops[i], min.stopped.draw[i], max.stopped.draw[i]) %>% qnorm()
+      time[i] = time[i] + sum(z.scores.stopped)*sdev.stopped
+    }
+  }
+  
+  return(time)
+}
+
+
+go.for.two = function(score.diff, time.left){
+  return(ifelse(time.left < 1800 & score.diff %in% c(13, 6, -1, -2, -5, -8, -15, -16, -22:-24), T, F))
+}
+
+get.downs.prediction = function(data, running.play.length.model, stopped.play.length.model, downs.normal.model, 
+  downs.end.half.model, downs.end.game.model, downs.ot.model, downs.n.clock.stops.model, 
+  downs.yrds.gained.models, kickoff.normal.model, kickoff.end.half.model, kickoff.end.game.model, kickoff.ot.model, 
+  kickoff.n.plays.model, kickoff.n.clock.stops.model, mu.model, sigma.model, tie.model, game.4th.model, 
+  game.ot.model, n.kickoff.draws, n.down.draws, off.td.model, turnover.td.model, fg.make.model, punt.td.model, 
+  fg.block.model, turnover.dist, converted.dist, safety.dist, downs.penalty.model, fg.block.td.model, converted.yrds.gained.models,
+  turnovers.yrds.gained.models, downs.turnover.yrds.gained.models, fg.yrds.gained.models, punts.yards.gained.models, 
+  penalty.conversion.prob.model, penalty.converted.yrds.gained.models, min.running.play.length, max.running.play.length, 
+  max.stopped.play.length){
+  
+  down = as.numeric(data$down)
+  
+  #get outcomes
+  if(data$TimeSecs > 300 & !(data$TimeSecs > 1800 & data$TimeSecs <= 1980)){
+    outcome = parse.downs.predictions(data, downs.normal.model[[down]], n.downs.draws, "glm")
+  }
+  if(data$TimeSecs > 1800 & data$TimeSecs <= 1980){
+    outcome = parse.downs.predictions(data, downs.end.half.model[[down]], n.downs.draws, "gbm")
+  }
+  if(data$TimeSecs <= 300 & data$TimeSecs > 0){
+    outcome = parse.downs.predictions(data, downs.end.game.model[[down]], n.downs.draws, "gbm")
+  }
+  if(data$TimeSecs <= 0){
+    outcome = parse.downs.predictions(data, downs.ot.model[[down]], n.downs.draws, "gbm")
+  }
+  
+  #add common sense logic that team with the ball between the 4 yard line and 45 yard line with score.diff between -3 and 0 will attempt a field goal
+  data = data[rep(seq_len(nrow(data)), each=n.downs.draws),]
+  outcome = ifelse(data$score.diff <= 0 & data$score.diff >= -3 & ((data$yrdline100 >= 10 & data$TimeSecs.adj <= 10) | 
+    (data$yrdline100 >= 4 & data$TimeSecs.adj <= 4)) & data$yrdline100 <= 45, "Field Goal", outcome)
+  
+  data$downs.outcome = outcome
+  game.predictions = rep(NA, length(outcome))
+  
+  get.new.data = ifelse((outcome == "End Half" & data$ot == 1) | (outcome == "End Half" & data$score.diff != 0 & data$TimeSecs < 300),
+    0, 1)
+  
+  data = change.data.downs(data, outcome, downs.n.clock.stop.model, n.plays.lnorm.sigma, running.play.length.model, 
+    stopped.play.length.model, downs.yards.gained.model, off.td.model, turnover.td.model, fg.make.model, punt.td.model, 
+    fg.block.model, fg.block.yards.gained.model, turnover.dist, converted.dist, safety.dist, downs.penalty.model, turnovers.yrds.gained.models, 
+    downs.turnover.yrds.gained.models, fg.yrds.gained.models, punts.yards.gained.models, penalty.conversion.prob.model, 
+    penalty.converted.yrds.gained.models, min.running.play.length, max.running.play.length, max.stopped.play.length, get.new.data)
+  #remove simulated data of this type....pops up very infrequently and gives me trouble
+  data = data[which(data$downs.outcome != "Downs" | !is.na(data$yrdline100)),]
+  #fix occasional errors for data$TimeSecs.half.to
+  data$TimeSecs.half.to = ifelse(data$TimeSecs.half.to < 0, data$TimeSecs.adj, data$TimeSecs.half.to)
+  
+  game.predictions = ifelse(data$downs.outcome == "End Half" & data$ot == 1, 0.5,
+    ifelse(data$downs.outcome == "End Half" & data$score.diff > 0 & data$TimeSecs < 300, 1,
+    ifelse(data$downs.outcome == "End Half" & data$score.diff < 0 & data$TimeSecs < 300, 0, NA)))
+  game.predictions[which((data$score == 1 | data$downs.outcome == "End Half") & is.na(game.predictions))] = 
+    get.game.outcome.prediction(data[which((data$score == 1 | data$downs.outcome == "End Half") & is.na(game.predictions)),], tie.model, mu.model, 
+    sigma.model, game.4th.model, game.ot.model)
+  game.predictions[which(data$downs.possession.change == 1)] = 1-game.predictions[which(data$downs.possession.change == 1)]
+  
+  if(length(which(is.na(game.predictions))) > 0){
+    game.predictions.sims = get.kickoff.prediction(data[which(is.na(game.predictions)),], 
+      kickoff.normal.model, kickoff.end.half.model, kickoff.end.game.model, kickoff.ot.model, 
+      kickoff.n.plays.model, kickoff.n.clock.stops.model, running.play.length.model, stopped.play.length.model, n.plays.lnorm.sigma,
+      lg.two.point.success, lg.xp.miss, lg.xp.safety, tie.model, mu.model, sigma.model, game.4th.model, game.ot.model, 
+      n.kickoff.draws, min.running.play.length, max.running.play.length,  max.stopped.play.length)
+    na.indices = which(is.na(game.predictions))
+    for(i in c(1:length(na.indices))){
+      start = (i-1)*n.kickoff.draws/20 + 1
+      end = i*n.kickoff.draws/20
+      game.predictions[na.indices[i]] = mean(game.predictions.sims[start:end])
+    }    
+  }
+  
+  return(game.predictions)
+}
+
+parse.downs.predictions = function(data, model, n.downs.draws, type){
+  if(type == "gbm"){
+    pred = as.data.frame(predict(model, data, type="response", n.trees = 500))
+    output = sample(str_replace(colnames(pred), ".500", ""), n.downs.draws, prob = pred[1,], replace = TRUE)
+  }
+  if(type == "glm"){
+    pred = predict(model, data, type="probs")
+  
+    for(i in c(2:length(pred))){
+      pred[i] = pred[i-1]+ pred[i]
+    }
+    draw = runif(n.downs.draws, 0, 1)
+    output = c(1:n.downs.draws)
+    for (i in c(1:n.downs.draws)){
+      output[i] = names(pred)[min(which(pred > draw[i]))]
+    }
+  }
+  return(output)
+}  
+  
+change.data.downs = function(data, outcome, downs.n.clock.stop.model, n.plays.lnorm.sigma, running.play.length.model, 
+  stopped.play.length.model, downs.yards.gained.model, off.td.model, turnover.td.model, fg.make.model, punt.td.model, fg.block.model,
+  fg.block.yards.gained.model, turnover.dist, converted.dist, safety.dist, downs.penalty.model, turnovers.yrds.gained.models, 
+  downs.turnover.yrds.gained.models, fg.yrds.gained.models, punts.yards.gained.models, penalty.conversion.prob.model, 
+  penalty.converted.yrds.gained.models, min.running.play.length, max.running.play.length, max.stopped.play.length, get.new.data){
+  
+  conv.indices = which(outcome == "Converted")
+  downs.indices = which(outcome == "Downs")
+  end.half.indices = which(outcome == "End Half" & get.new.data == 1)
+  fg.indices = which(outcome == "Field Goal")
+  punt.indices = which(outcome == "Punt")
+  turnover.indices = which(outcome == "Turnover")
+  safety.indices = which(outcome == "Safety")
+  
+  td.pred = rep(0, length(outcome))
+  td.pred[conv.indices] =  predict(off.td.model, data[conv.indices,], type = "response", n.trees = 500)
+  td.pred[fg.indices] =  predict(fg.block.td.model, data[fg.indices,], type = "response", n.trees = 500)
+  td.pred[punt.indices] =  predict(punt.td.model, data[punt.indices,], type = "response", n.trees = 500)
+  td.pred[turnover.indices] =  predict(turnover.td.model, data[turnover.indices,], type = "response", n.trees = 500)
+  
+  fg.make.pred = rep(NA, length(outcome))
+  fg.make.pred[fg.indices] = predict(fg.make.model, data[fg.indices,], type = "response", n.trees = 500)
+  
+  fg.block.pred = rep(NA, length(outcome))
+  fg.block.pred[fg.indices] = predict(fg.block.model, data[fg.indices,], type = "response", n.trees = 500)
+  
+  fg.draw = runif(length(fg.indices), 0, 1)
+  fg.result = ifelse(fg.draw < fg.make.pred[fg.indices], "Good", 
+    ifelse(1-fg.draw < fg.block.pred[fg.indices], "Blocked", "No Good"))
+  td.pred[fg.indices] = ifelse(fg.result != "Blocked", 0, td.pred[fg.indices])
+  data$FieldGoalResult[fg.indices] = fg.result
+  
+  score.draw = runif(length(outcome), 0, 1)
+  score = ifelse(score.draw > td.pred, "None",
+    ifelse(outcome == "Converted", "Off TD", "Def TD"))
+  score[fg.indices] = ifelse(fg.result == "Good", "Off FG", "None")
+  score[safety.indices] = "Def Safety"
+  
+  #update time...if there are less than 10 seconds left assume the conclusion of the set of downs sends us into halftime
+  #score will still updated for these indices but we don't need to worry about yards or time updates.
+  outcome = ifelse((data$TimeSecs > 1800 & data$TimeSecs < 1810) | (data$TimeSecs >= 0 & data$TimeSecs < 10) | data$TimeSecs < -890, "End Half", outcome)
+  end.half.indices = which(outcome == "End Half")
+  time = rep(9999, length(outcome))
+  indices = c(1:length(outcome))
+  if(length(end.half.indices) != 0){
+    indices = indices[-end.half.indices]
+  }
+  iter = 1
+  while(length(indices) > 0){
+    if(iter >= 10){
+      outcome[indices] = "End Half"
+      break
+    }
+    time[indices] = get.downs.time.elapsed.prediction(data[indices,], outcome[indices], downs.n.clock.stop.model, downs.penalty.model, 
+      running.play.length.model, stopped.play.length.model, turnover.dist, converted.dist, safety.dist, min.running.play.length, 
+      max.running.play.length, max.stopped.play.length)
+    indices = indices[which((data$TimeSecs[indices] > 1800 & data$TimeSecs[indices] - time[indices] < 1800) | 
+      (data$TimeSecs[indices] > 0 & data$TimeSecs[indices] - time[indices] < 0) | data$TimeSecs[indices] - time[indices] < -900)]
+    iter = iter + 1
+  }
+  
+  #refresh for outcomes that may have changed
+  end.half.indices = which(outcome == "End Half")
+  
+  indices = c(1:length(outcome))
+  if(length(end.half.indices) != 0){
+    indices = indices[-end.half.indices]
+  }
+  data$TimeSecs[indices] = data$TimeSecs[indices] - time[indices]
+  data$TimeSecs.adj[indices] = data$TimeSecs.adj[indices] - time[indices]
+  data$TimeSecs.half.to[indices] = data$TimeSecs.half.to[indices] - time[indices]
+  data$TimeSecs.ot.zero[indices] = data$TimeSecs.ot.zero[indices] - time[indices]
+  
+  off.td.indices = which(score == "Off TD")
+  def.td.indices = which(score == "Def TD")
+  off.fg.indices = which(score == "Off FG")
+  
+  td.indices.draw = runif(length(off.td.indices), 0, 1)
+  data$score.diff[off.td.indices] = ifelse(go.for.two(data$score.diff[off.td.indices], data$TimeSecs[off.td.indices]),
+    ifelse(td.indices.draw < lg.two.point.success, data$score.diff[off.td.indices] + 8,
+    ifelse(td.indices.draw > (1- lg.xp.safety), data$score.diff[off.td.indices] + 4, data$score.diff[off.td.indices] + 6)),
+    ifelse(td.indices.draw < lg.xp.safety, data$score.diff[off.td.indices] + 4,
+    ifelse(td.indices.draw > (1-lg.xp.miss), data$score.diff[off.td.indices] + 6, data$score.diff[off.td.indices] + 7)))
+  
+  td.indices.draw = runif(length(def.td.indices), 0, 1)
+  data$score.diff[def.td.indices] = ifelse(go.for.two(-1*data$score.diff[def.td.indices], data$TimeSecs[def.td.indices]),
+    ifelse(td.indices.draw < lg.two.point.success, data$score.diff[def.td.indices] - 8,
+    ifelse(td.indices.draw > (1- lg.xp.safety), data$score.diff[def.td.indices] - 4, data$score.diff[def.td.indices] - 6)),
+    ifelse(td.indices.draw < lg.xp.safety, data$score.diff[def.td.indices] - 4,
+    ifelse(td.indices.draw > (1-lg.xp.miss), data$score.diff[def.td.indices] - 6, data$score.diff[def.td.indices] - 7)))
+  
+  data$score.diff[off.fg.indices] = (data$score.diff[off.fg.indices] + 3)
+  data$score.diff[safety.indices] = (data$score.diff[safety.indices] - 2)
+  
+  #update time for sets of downs that end with the half
+  data$TimeSecs[end.half.indices] = ifelse(data$TimeSecs[end.half.indices] > 1800, 1800, 0)
+  data$TimeSecs.adj[end.half.indices] = ifelse(data$TimeSecs[end.half.indices] > 1800, 1800, 0)
+  data$TimeSecs.half.to[end.half.indices] = ifelse(data$TimeSecs[end.half.indices] > 1800, 1800, 0)  
+  data$TimeSecs.ot.zero[end.half.indices] = ifelse(data$TimeSecs[end.half.indices] > 1800, 2700, 0)
+  
+  #overwrite end half indices of games going to overtime
+  
+  ot.indices = which(outcome == "End Half" & data$TimeSecs <= 300 & data$TimeSecs >= 0 & data$score.diff == 0)
+  data$ot[ot.indices] = 1
+  data$ot.kickoff[ot.indices] = 1
+  data$TimeSecs[ot.indices] = -300 
+  data$TimeSecs.adj[ot.indices] = 600  
+  data$TimeSecs.half.to[ot.indices] = 600  
+  data$TimeSecs.ot.zero[ot.indices] = 600 
+  #update possession
+  possession.indices = which(!((outcome == "Converted" & score == "None") | 
+    (outcome == "End Half" & data$pos.receive.2nd.half.kickoff != -1) | str_detect(score, "Def TD")))
+  #add half of ot.indices to possession.indices
+  ot.draw = runif(length(ot.indices), 0, 1)
+  possession.indices = sort(c(possession.indices, ot.indices[which(ot.draw > .5)]))
+  
+  def.o.dvoa = data$pos.o.dvoa[possession.indices]
+  def.d.dvoa = data$pos.d.dvoa[possession.indices]
+  def.st.dvoa = data$pos.st.dvoa[possession.indices]
+  def.qb.grade = data$pos.qb.grade[possession.indices]
+  def.timeouts = data$defteam_timeouts_pre[possession.indices]
+  
+  data$pos.o.dvoa[possession.indices] = data$def.o.dvoa[possession.indices]
+  data$pos.d.dvoa[possession.indices] = data$def.d.dvoa[possession.indices]
+  data$pos.st.dvoa[possession.indices] = data$def.st.dvoa[possession.indices]
+  data$pos.qb.grade[possession.indices] = data$def.qb.grade[possession.indices]
+  data$def.o.dvoa[possession.indices] = def.o.dvoa
+  data$def.d.dvoa[possession.indices] = def.d.dvoa
+  data$def.st.dvoa[possession.indices] = def.st.dvoa
+  data$def.qb.grade[possession.indices] = def.qb.grade
+  data$defteam_timeouts_pre[possession.indices] = data$posteam_timeouts_pre[possession.indices]
+  data$posteam_timeouts_pre[possession.indices] = def.timeouts
+  data$pos.receive.2nd.half.kickoff[possession.indices] = -1*data$pos.receive.2nd.half.kickoff[possession.indices]
+  data$pos.line[possession.indices] = -1*data$pos.line[possession.indices]
+  data$score.diff[possession.indices] = -1*data$score.diff[possession.indices]
+  
+  data$pos.line.scaled = data$pos.line*(data$TimeSecs.adj/3600)
+  #add safety model later
+
+  yrds.gained = rep(999, length(outcome))
+  
+  converted.yrds.indices = which(score == "None" & outcome == "Converted")
+  penalty.conversion.prob = predict(penalty.conversion.prob.model, data[converted.yrds.indices,], type = "response", n.trees = 200)
+  penalty = rep(NA, length(outcome))
+  penalty[converted.yrds.indices] = ifelse(runif(length(converted.yrds.indices), 0, 1) < penalty.conversion.prob | 
+    data$ydstogo[converted.yrds.indices] == data$yrdline100[converted.yrds.indices], 1, 0)
+  
+  converted.yrds.indices =  which(score == "None" & outcome == "Converted" & penalty == 0)
+  penalty.converted.yrds.indices =  which(score == "None" & outcome == "Converted" & penalty == 1)
+  
+  yrds.indices = converted.yrds.indices
+  while(length(yrds.indices) > 0){
+    yrds.gained[yrds.indices] = get.yards.gained(data[yrds.indices,], outcome[yrds.indices], penalty[yrds.indices], 
+      converted.yards.gained.models, turnovers.yrds.gained.models, downs.turnover.yrds.gained.models, fg.yrds.gained.models, 
+      punts.yards.gained.models, penalty.converted.yrds.gained.models)
+    yrds.gained[yrds.indices] = ifelse(data$yrdline100[yrds.indices] - data$ydstogo[yrds.indices] == 1, 
+      data$ydstogo[yrds.indices], yrds.gained[yrds.indices])
+    #update indices that have invalid values for yards.gained
+    yrds.indices = yrds.indices[which(yrds.gained[yrds.indices] >= data$yrdline100[yrds.indices] | 
+      yrds.gained[yrds.indices] < data$ydstogo[yrds.indices])]
+  }
+  
+  yrds.indices = penalty.converted.yrds.indices
+  while(length(yrds.indices) > 0){
+    yrds.gained[yrds.indices] = get.yards.gained(data[yrds.indices,], outcome[yrds.indices], penalty[yrds.indices], 
+      converted.yards.gained.models, turnovers.yrds.gained.models, downs.turnover.yrds.gained.models, fg.yrds.gained.models, 
+      punts.yards.gained.models, penalty.converted.yrds.gained.models)
+    #update indices that have invalid values for yards.gained
+    yrds.indices = yrds.indices[which(yrds.gained[yrds.indices] >= data$yrdline100[yrds.indices] | 
+      data$yrdline100[yrds.indices] - yrds.gained[yrds.indices] > 99)]
+  }
+  
+  yrds.indices = downs.indices
+  while(length(yrds.indices) > 0){
+    yrds.gained[yrds.indices] = get.yards.gained(data[yrds.indices,], outcome[yrds.indices], penalty[yrds.indices], 
+      converted.yards.gained.models, turnovers.yrds.gained.models, downs.turnover.yrds.gained.models, fg.yrds.gained.models, 
+      punts.yards.gained.models, penalty.converted.yrds.gained.models)
+    #update indices that have invalid values for yards.gained
+    yrds.indices = yrds.indices[which(yrds.gained[yrds.indices] >= data$ydstogo[yrds.indices] | 
+      data$yrdline100[yrds.indices] - yrds.gained[yrds.indices] > 99)]
+  }
+  
+  fg.punt.turnover.yrds.indices = which(score == "None" & (str_detect(outcome, "Field Goal|Punt|Turnover")))
+  yrds.indices = fg.punt.turnover.yrds.indices
+  while(length(yrds.indices) > 0){
+    yrds.gained[yrds.indices] = get.yards.gained(data[yrds.indices,], outcome[yrds.indices], penalty[yrds.indices], 
+      converted.yards.gained.models, turnovers.yrds.gained.models, downs.turnover.yrds.gained.models, fg.yrds.gained.models, 
+      punts.yards.gained.models, penalty.converted.yrds.gained.models)
+    #update indices that have invalid values for yards.gained
+    yrds.indices = yrds.indices[which(yrds.gained[yrds.indices] >= data$yrdline100[yrds.indices] | 
+      data$yrdline100[yrds.indices] - yrds.gained[yrds.indices] > 99)]
+  }
+  
+  #change data$score to zero - one scale 
+  data$score = ifelse(is.na(score) | score == "None", 0, 1)
+  data$score.desc = score
+  data$down = "1"
+  data$ydstogo = 10
+  data$yrdline100 = data$yrdline100 - yrds.gained
+  data$yrdline100[possession.indices] = 100-data$yrdline100[possession.indices]
+  data$downs.possession.change = rep(0, nrow(data))
+  data$downs.possession.change[possession.indices] = 1
+  data$sqrt.TimeSecs.half.to = ifelse(data$TimeSecs.half.to < 0, 0, sqrt(data$TimeSecs.half.to))
+  data$downs.outcome = outcome
+  return(data)
+}
+
+get.downs.time.elapsed.prediction = function(data, outcome, downs.n.clock.stop.model, downs.penalty.model, 
+  running.play.length.model, stopped.play.length.model, turnover.dist, converted.dist, safety.dist, min.running.play.length, 
+  max.running.play.length, max.stopped.play.length){
+  
+  #first get predicted number of plays
+  n.plays = rep(NA, length(outcome))
+  downs.fg.punt.indices = which(str_detect(outcome, "Downs|Field Goal|Punt"))
+  converted.indices = which(outcome == "Converted")
+  turnover.indices = which(outcome == "Turnover")
+  safety.indices = which(outcome == "Safety")
+  
+  pred.penalty.rate = predict(downs.penalty.model, data, type = "response", n.trees = 200)
+  
+  n.plays[downs.fg.punt.indices] = 5 - as.numeric(data$down[downs.fg.punt.indices])
+  n.plays[downs.fg.punt.indices] = rbinom(length(downs.fg.punt.indices), n.plays[downs.fg.punt.indices], 
+    prob = pred.penalty.rate[downs.fg.punt.indices]) + n.plays[downs.fg.punt.indices]
+  
+  down = as.numeric(data$down[1])
+  end = 5 - down
+  
+  n.plays[converted.indices] = sample(c(1:end), length(converted.indices), prob = converted.dist[down:4]/sum(converted.dist[down:4]),
+    replace = TRUE)
+  n.plays[converted.indices] = rbinom(length(converted.indices), n.plays[converted.indices], 
+    prob = pred.penalty.rate[converted.indices]) + n.plays[converted.indices]
+  
+  n.plays[turnover.indices] = sample(c(1:end), length(turnover.indices), prob = turnover.dist[down:4]/sum(turnover.dist[down:4]),
+    replace = TRUE)
+  n.plays[turnover.indices] = rbinom(length(turnover.indices), n.plays[turnover.indices], 
+    prob = pred.penalty.rate[turnover.indices]) + n.plays[turnover.indices] 
+  
+  n.plays[safety.indices] = sample(c(1:end), length(safety.indices), prob = safety.dist[down:4]/sum(safety.dist[down:4]),
+    replace = TRUE)
+  n.plays[safety.indices] = rbinom(length(safety.indices), n.plays[safety.indices], 
+    prob = pred.penalty.rate[safety.indices]) + n.plays[safety.indices] 
+  
+  data$downs.n.plays.until.1st = n.plays
+  
+  #now get predicted number of stops
+  pred.stops.prob = predict(downs.n.clock.stop.model, data, type = "response", n.trees = 1000)
+  n.clock.stops = rbinom(n = length(outcome), size = n.plays, prob = pred.stops.prob)
+  n.running.plays = n.plays - n.clock.stops
+  
+  #then make draws for running plays and draws for stopped plays and sum to get total time
+  running.play.length.pred = predict(running.play.length.model, data)
+  stopped.play.length.pred = predict(stopped.play.length.model, data)
+  
+  sdev.running = sd(running.play.length.model$residuals)
+  sdev.stopped = sd(stopped.play.length.model$residuals)
+  
+  #restrict draws to acceptable play lengths
+  min.running.draw = pnorm((min.running.play.length - running.play.length.pred)/sdev.running)
+  min.stopped.draw = pnorm((1 - stopped.play.length.pred)/sdev.running)
+  max.running.draw = pnorm((max.running.play.length - running.play.length.pred)/sdev.running)
+  max.stopped.draw = pnorm((max.stopped.play.length - stopped.play.length.pred)/sdev.running)
+  
+  #maybe get variance by utilizing sum of normals...
+  
+  #get time mean
+  time = running.play.length.pred * n.running.plays + stopped.play.length.pred * n.clock.stops  
+  
+  for(i in c(1:length(outcome))){
+    if(n.running.plays[i] != 0){
+      z.scores.running = runif(n.running.plays[i], min.running.draw[i], max.running.draw[i]) %>% qnorm()
+      time[i] = time[i] + sum(z.scores.running)*sdev.running
+    }
+    if(n.clock.stops[i] != 0){
+      z.scores.stopped = runif(n.clock.stops[i], min.stopped.draw[i], max.stopped.draw[i]) %>% qnorm()
+      time[i] = time[i] + sum(z.scores.stopped)*sdev.stopped
+    }
+  }
+  
+  return(time)
+}
+
+get.yards.gained = function(data, outcome, penalty, converted.yards.gained.models, turnovers.yrds.gained.models, 
+  downs.turnover.yrds.gained.models, fg.yrds.gained.models, punts.yards.gained.models, 
+  penalty.converted.yrds.gained.models){
+  
+  yards.gained = rep(NA, length(outcome))
+  model.index = ceiling(as.numeric(data$down)/3)[1]
+  z.score = runif(length(outcome),0,1) %>% qnorm()
+  
+  fg.miss.indices = which(outcome == "Field Goal" & data$FieldGoalResult != "Blocked")
+  fg.block.indices = which(outcome == "Field Goal" & data$FieldGoalResult == "Blocked")
+  punt.indices = which(outcome == "Punt")
+  turnover.indices = which(outcome == "Turnover")
+  
+  if(outcome[1] == "Converted" & penalty[1] == 0){
+    yards.gained = ifelse(data$down == "1",
+      ifelse(data$ydstogo < 10, 
+      predict(converted.yrds.gained.models[[1]][[1]], data) + 
+      z.score*sd(converted.yrds.gained.models[[1]][[1]]$residuals),
+      predict(converted.yrds.gained.models[[1]][[2]], data) + 
+      z.score*sd(converted.yrds.gained.models[[1]][[2]]$residuals)), 
+      predict(converted.yrds.gained.models[[as.numeric(data$down[1])]], data) + 
+      z.score*sd(converted.yrds.gained.models[[as.numeric(data$down[1])]]$residuals))
+  }
+  
+  
+  if(outcome[1] == "Converted" & penalty[1] == 1){
+    yards.gained = predict(penalty.converted.yrds.gained.models[[model.index]], data) + z.score * 
+      sd(penalty.converted.yrds.gained.models[[model.index]]$residuals)
+  }
+  
+  if(outcome[1] == "Downs"){
+    yards.gained = predict(downs.turnover.yrds.gained.models[[model.index]], 
+      data) + z.score * sd(downs.turnover.yrds.gained.models[[model.index]]$residuals)
+  }
+ 
+  if(str_detect(outcome[1], "Field Goal|Punt|Turnover")){
+    indices = fg.miss.indices
+    if(length(indices) > 0){
+      yards.gained[indices] = ifelse(as.numeric(data$down) == 4, -7, predict(fg.yrds.gained.models[[model.index]], 
+        data[indices, ]) + z.score[indices] * sd(fg.yrds.gained.models[[model.index]]$residuals))
+    }
+    
+    indices = fg.block.indices
+    if(length(indices) > 0){
+      yards.gained[indices] = predict(fg.yrds.gained.models[[(model.index+1)]], data[indices, ]) + 
+        z.score[indices] * sd(fg.yrds.gained.models[[(model.index+1)]]$residuals)
+    }
+    
+  
+    indices = punt.indices
+    if(length(indices) > 0){
+      yards.gained[indices] = predict(punts.yrds.gained.models[[model.index]], 
+        data[indices, ]) + z.score[indices] * sd(punts.yrds.gained.models[[model.index]]$residuals)
+    }
+    
+  
+    indices = turnover.indices
+    if(length(indices) > 0){
+      yards.gained[indices] = predict(turnovers.yrds.gained.models[[model.index]], 
+        data[indices, ]) + z.score[indices] * sd(turnovers.yrds.gained.models[[model.index]]$residuals)
+    }
+  }
+  return(round(yards.gained, 0))
+}
+
+get.xp.prediction = function(data, tie.model, mu.model, sigma.model, game.4th.model, game.ot.model, n.xp.draws){
+  #get xp result
+  data = data[rep(seq_len(nrow(data)), each=n.xp.draws),]
+  draw = runif(n.xp.draws, 0, 1)
+  data$score.diff = ifelse(go.for.two(data$score.diff, data$TimeSecs),
+    ifelse(draw < lg.two.point.success, data$score.diff + 2,
+    ifelse(draw > (1- lg.xp.safety), data$score.diff - 2, data$score.diff)),
+    ifelse(draw < lg.xp.safety, data$score.diff - 2,
+    ifelse(draw > (1-lg.xp.miss), data$score.diff, data$score.diff + 1)))
+  
+  #change possession unless score at end of half (assume kneel if 5 seconds or less) and team receives 2nd half kickoff or score at end of game
+  draw = runif(n.xp.draws, 0, 1)
+  possession.change = rep(0, n.xp.draws)
+  possession.indices = which(!((data$TimeSecs >= 1800 & data$TimeSecs <= 1805 & data$pos.receive.2nd.half.kickoff == 1) | 
+    (data$TimeSecs == 0 & draw > 0.5)))
+  def.o.dvoa = data$pos.o.dvoa
+  def.d.dvoa = data$pos.d.dvoa
+  def.st.dvoa = data$pos.st.dvoa
+  def.qb.grade = data$pos.qb.grade
+  def.timeouts = data$posteam_timeouts_pre
+  
+  data$pos.o.dvoa[possession.indices] = data$def.o.dvoa[possession.indices]
+  data$pos.d.dvoa[possession.indices] = data$def.d.dvoa[possession.indices]
+  data$pos.st.dvoa[possession.indices] = data$def.st.dvoa[possession.indices]
+  data$pos.qb.grade[possession.indices] = data$def.qb.grade[possession.indices]
+  data$def.o.dvoa[possession.indices] = def.o.dvoa[possession.indices]
+  data$def.d.dvoa[possession.indices] = def.d.dvoa[possession.indices]
+  data$def.st.dvoa[possession.indices] = def.st.dvoa[possession.indices]
+  data$def.qb.grade[possession.indices] = def.qb.grade[possession.indices]
+  data$defteam_timeouts_pre[possession.indices] = data$posteam_timeouts_pre[possession.indices]
+  data$posteam_timeouts_pre[possession.indices] = def.timeouts[possession.indices]
+  data$pos.receive.2nd.half.kickoff[possession.indices] = -1*data$pos.receive.2nd.half.kickoff[possession.indices]
+  data$pos.line[possession.indices] = -1*data$pos.line[possession.indices]
+  data$score.diff[possession.indices] = -1*data$score.diff[possession.indices]
+  data$pos.line.scaled[possession.indices] = -1*data$pos.line.scaled[possession.indices]
+    
+  possession.change[possession.indices] = 1
+  
+  #assume kneel if < 5 seconds left in half
+  kneel.indices = which(data$TimeSecs >= 1800 & data$TimeSecs <= 1805)
+  data$pos.receive.2nd.half.kickoff[kneel.indices] = 0
+  data$TimeSecs[kneel.indices] = 1800
+  
+  pred = get.game.outcome.prediction(data, tie.model, mu.model, sigma.model, game.4th.model, game.ot.model)
+  pred = ifelse(possession.change == 0, pred, 1-pred)
+  return(mean(pred))
+}
+
+```
+
+#run model to output predictions!
+```{r}
+running.play.length.model = readRDS(file = "final-models/running.play.length.Rda")
+stopped.play.length.model = readRDS(file = "final-models/stopped.play.length.Rda")
+downs.normal.model = readRDS(file = "final-models/downs.glm.normal.Rda")
+downs.end.half.model = readRDS(file = "final-models/downs.boosted.end.half.Rda")
+downs.end.game.model = readRDS(file = "final-models/downs.boosted.end.game.Rda")
+downs.ot.model = readRDS(file = "final-models/downs.boosted.ot.Rda")
+downs.n.clock.stop.model = readRDS(file = "final-models/downs.n.clock.stop.gbm.Rda")
+kickoff.normal.model = readRDS(file = "final-models/kickoff.simple.lm.normal.Rda")
+kickoff.end.half.model = readRDS(file = "final-models/kickoff.simple.lm.end.half.Rda")
+kickoff.end.game.model = readRDS(file = "final-models/kickoff.simple.lm.4th.Rda")
+kickoff.ot.model = readRDS(file = "final-models/kickoff.simple.lm.ot.Rda")
+kickoff.n.plays.model = readRDS(file = "final-models/kickoff.n.plays.lm.Rda")
+kickoff.n.clock.stops.model = readRDS(file = "final-models/kickoff.n.clock.stop.model.Rda")
+mu.model = readRDS(file = "final-models/game.outcome.mu.Rda")
+sigma.model = readRDS(file = "final-models/game.outcome.sigma.Rda")
+tie.model = readRDS(file = "final-models/tie.model.Rda")
+game.4th.model = readRDS(file = "final-models/game.4th.model.Rda")
+game.ot.model = readRDS(file = "final-models/game.ot.model.Rda")
+n.kickoff.draws = 200
+n.downs.draws = 100
+n.xp.draws = 100
+off.td.model = readRDS(file = "final-models/td.model.Rda")
+turnover.td.model = readRDS(file = "final-models/turnover.td.model.Rda")
+fg.make.model = readRDS(file = "final-models/fg.make.model.Rda")
+punt.td.model = readRDS(file = "final-models/punt.td.model.Rda")
+fg.block.td.model = readRDS(file = "final-models/fg.block.td.model.Rda")
+fg.block.model = readRDS(file = "final-models/fg.block.model.Rda")
+turnover.dist = readRDS(file = "final-models/turnover.dist.Rda")
+converted.dist = readRDS(file = "final-models/converted.dist.Rda")
+safety.dist = readRDS(file = "final-models/safety.dist.Rda")
+downs.penalty.model = readRDS(file = "final-models/penalty.gbm.Rda")
+turnovers.yrds.gained.models = 
+  readRDS(file = "final-models/turnovers.yrds.gained.models.Rda")
+downs.turnover.yrds.gained.models = 
+  readRDS(file = "final-models/downs.turnover.yrds.gained.models.Rda")
+fg.yrds.gained.models = readRDS(file = "final-models/fg.yrds.gained.models.Rda")
+converted.yrds.gained.models = readRDS(file = 
+  "final-models/converted.yrds.gained.models.Rda")
+penalty.converted.yrds.gained.models = readRDS(file = 
+  "final-models/penalty.converted.yrds.gained.models.Rda")
+punts.yrds.gained.models = readRDS(file = "final-models/punts.yrds.gained.models.Rda")
+penalty.conversion.prob.model = readRDS(file = "final-models/conversion.by.penalty.prob.Rda")
+n.plays.lnorm.sigma = readRDS(file = "final-models/n.plays.lnorm.sigma.Rda")
+lg.two.point.success = 0.479 #fivethirtyeight
+lg.xp.miss = .944 #fivethirtyeight
+lg.xp.safety = .002 #back of the envelope
+lg.penalty.rate = .0765 #used data
+replacement.qb.grade = 60
+min.running.play.length = 15
+max.running.play.length = 50
+max.stopped.play.length = 15
+
+data.win.train = readRDS(file = "data.win.train.Rda")
+test.set = readRDS(file = "cleaned-data-part-4.Rda")
+cols.to.keep = c("down", "TimeSecs", "yrdline100", "ydstogo", "posteam", "DefensiveTeam", "posteam_timeouts_pre", "defteam_timeouts_pre", "pos.o.dvoa", "pos.d.dvoa", "pos.st.dvoa", "def.o.dvoa", "def.d.dvoa", "def.st.dvoa", "pos.line", "pos.qb.grade", "def.qb.grade", "score.diff", "comeback.score", "ot.kickoff", "ot", "TimeSecs.adj", "TimeSecs.half.to", "TimeSecs.ot.zero", "pos.line.scaled", "pos.receive.2nd.half.kickoff", "downs.clock.will.stop", "kickoff", "kickoff.clock.will.stop", "kickoff.TimeSecs.half.to", "FieldGoalResult", "pos.win", "ot.possession.count",
+  "downs.TimeSecs.half.to", "kickoff.comeback.score", "downs.comeback.score", "yrdline.group", "desc", "Win_Prob", "lock.nettleton.prob", "week")
+test.set = test.set[which(test.set$year == 2017), which(colnames(test.set) %in% cols.to.keep)]
+test.set = test.set %>% filter(!str_detect(test.set$desc, "END"))
+test.set$pos.qb.grade[which(is.na(test.set$pos.qb.grade))] = replacement.qb.grade
+test.set$def.qb.grade[which(is.na(test.set$def.qb.grade))] = replacement.qb.grade
+#add very prob to this zero probability so we can evaluate loss for the nfl scrapr model
+test.set$Win_Prob = ifelse(test.set$Win_Prob == 0, 0.001, test.set$Win_Prob)
+#remove play by play rows where an NA play was entered for the end of half or quarter
+test.set = test.set %>% filter(!is.na(test.set$Win_Prob))
+
+#predictions = c(1:nrow(test.set))
+system.time(for(i in c(37569:nrow(test.set))){
+  if(i %% 500 == 0){
+    print(i)
+  }
+  suppressWarnings((
+  predictions[i] = get.prediction(data = test.set[i,], running.play.length.model, stopped.play.length.model, downs.normal.model, 
+  downs.end.half.model, downs.end.game.model, downs.ot.model, downs.n.clock.stops.model, 
+  kickoff.normal.model, kickoff.end.half.model, kickoff.end.game.model, kickoff.ot.model, kickoff.n.plays.model, 
+  kickoff.n.clock.stops.model, mu.model, sigma.model, tie.model, game.4th.model, game.ot.model, n.kickoff.draws = 400, 
+  n.down.draws = 200, n.xp.draws = 200, off.td.model, turnover.td.model, fg.make.model, punt.td.model, fg.block.model, 
+  turnover.dist, converted.dist, safety.dist, downs.penalty.model, turnovers.yrds.gained.models, downs.turnover.yrds.gained.models, 
+  fg.yrds.gained.models, punts.yards.gained.models, penalty.conversion.prob.model, penalty.converted.yrds.gained.models, 
+  n.plays.lnorm.sigma, fg.block.td.model, converted.yrds.gained.models, lg.two.point.success, lg.xp.miss, lg.xp.safety, 
+  min.running.play.length, max.running.play.length,  max.stopped.play.length)))
+})
+
+
+```
+
+#specify test.set predictions
+```{r}
+test.set$predictions = predictions
+```

@@ -1,0 +1,744 @@
+---
+title: "pbp-model"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+library(nnet)
+library(lme4)
+library(MCMCglmm)
+library(gbm)
+library(randomForest)
+library(stringr)
+library(e1071)
+library(gamlss)
+library(fitdistrplus)
+set.seed(60)
+data = readRDS(file = "cleaned-data-part-4.Rda")
+kickoff.indices = which(data$kickoff == 1)
+```
+
+#define functions
+```{r}
+make.glm.downs = function(train.set, formula){
+  output = as.list(c(1:4))
+  for(i in c(1:4)){
+    output[[i]] = multinom(data=train.set[[i]], as.formula(formula))
+  }
+  return(output)
+}
+
+make.gbm.downs = function(train.set, formula, ntree, depth, shrinkage){
+  output = as.list(c(1:4))
+  for(i in c(1:4)){
+    output[[i]] = gbm(as.formula(formula), data = train.set[[i]], n.trees = ntree, 
+      interaction.depth = depth, shrinkage = shrinkage, distribution = "multinomial")
+  }
+  return(output)
+}
+
+test.predictions.downs = function(models, test.set, n.vars, type){
+  output = rep(NA, length(models)*4)
+    type = ifelse(type == "gbm", "response", "probs")
+    for(down in c(1:4)){
+      model = models[[down]]
+      pred = NA
+      if(type == "probs"){
+        pred = as.data.frame(predict(model, test.set[[down]], type=type))
+      }
+      if(type == "response"){
+        pred = as.data.frame(predict(model, test.set[[down]], type=type, n.trees = 500))
+        colnames(pred) = str_replace_all(colnames(pred), ".500", "")
+      }
+      pred$response = as.factor(test.set[[down]]$downs.outcome)
+      pred$loss = rep(NA, nrow(test.set[[down]]))
+      for(i in c(1:nrow(pred))){
+        pred$loss[i] = log(pred[i,which(colnames(pred) == pred$response[i])])
+      }
+      output[down] = mean(pred$loss)
+      print(mean(pred$loss))
+    }
+  return(output)
+}
+
+make.downs.data = function(downs.data, type, cols){
+  set=NA
+  if(type == "train"){
+    set = which(downs.data$year < 2017)
+  } 
+  if(type == "test"){
+    set = which(downs.data$year == 2017)
+  }
+  output = list(c(1:4))
+  for(i in c(1:4)){
+    if(!(i == 1 & type == "test")){
+      output[[i]] = downs.data[set, ] %>% filter(down == i)
+      output[[i]] = output[[i]][,cols]
+    }
+    if(i == 1 & type == "test"){
+      output[[i]] = downs.data[set, ] %>% filter(down == i, ydstogo == 10)
+      output[[i]] = output[[i]][,cols]
+    }
+  }
+  return(output)
+}
+```
+
+#make normal downs models
+```{r}
+downs.remove.indices = which(data$TimeSecs < 300 | 
+  (data$TimeSecs < 1980 & data$TimeSecs > 1800) | 
+  str_detect(data$desc, "under review") | 
+  str_detect(data$desc, "END") | 
+  data$desc[1:nrow(data)] == c(data$desc[2:nrow(data)], "NA") |
+  is.na(data$downs.outcome) |
+  is.na(data$home.o.dvoa) | data$downs.outcome == "End Half" | is.na(data$down) | as.numeric(data$down) < 1)
+downs.data = data[-downs.remove.indices,]
+downs.data$downs.outcome = as.factor(downs.data$downs.outcome)
+
+downs.model.cols = which(colnames(data) %in% c("downs.outcome", "pos.o.dvoa", "def.d.dvoa", "pos.qb.grade", "ydstogo", "yrdline.group"))
+downs.train.set = make.downs.data(downs.data, "train", downs.model.cols)
+downs.formula = "as.factor(downs.outcome) ~ pos.o.dvoa + def.d.dvoa + pos.qb.grade + ydstogo + as.factor(yrdline.group)"
+
+#fit regular glm
+downs.glm.normal = make.glm.downs(downs.train.set, downs.formula)
+saveRDS(downs.glm.normal, "final-models/downs.glm.normal.Rda")
+
+#test model
+test.set = make.downs.data(downs.data, "test", downs.model.cols)
+downs.model.performance = test.predictions.downs(downs.glm.normal, test.set, 7, "glm")
+```
+
+#fit models for downs at end of first half
+```{r}
+downs.data = data[which(data$TimeSecs < 1980 & data$TimeSecs > 1800 &
+  !(str_detect(data$desc, "under review") | 
+  str_detect(data$desc, "END") | 
+  data$desc[1:nrow(data)] == c(data$desc[2:nrow(data)], "NA") |
+  is.na(data$downs.outcome) | is.na(data$down) | as.numeric(data$down) < 1 |
+  is.na(data$home.o.dvoa))),]
+
+downs.model.cols = which(colnames(downs.data) %in% c("downs.outcome", "pos.o.dvoa", "def.d.dvoa", "pos.qb.grade", "ydstogo", "yrdline.group", "score.diff", "TimeSecs.half.to"))
+downs.train.set = make.downs.data(downs.data, "train", downs.model.cols)
+downs.formula = "as.factor(downs.outcome) ~ pos.o.dvoa + def.d.dvoa + pos.qb.grade + ydstogo  + score.diff + TimeSecs.half.to + as.factor(yrdline.group)"
+
+#fit boosted forest
+downs.boosted.end.half = make.gbm.downs(downs.train.set, downs.formula, 1000, depth = 2, shrinkage = .02)
+saveRDS(downs.boosted.end.half, file = "final-models/downs.boosted.end.half.Rda")
+
+#test model
+test.set = make.downs.data(downs.data, "test", downs.model.cols)
+downs.model.performance = test.predictions.downs(downs.boosted.end.half, test.set, 6, "gbm")
+
+```
+
+
+#fit models for downs at end of game
+```{r}
+downs.data = data[which(data$TimeSecs < 300 & data$TimeSecs > 0 &
+  !(str_detect(data$desc, "under review") | 
+  str_detect(data$desc, "END") | is.na(data$downs.time.elapsed) |
+  data$desc[1:nrow(data)] == c(data$desc[2:nrow(data)], "NA") |
+  is.na(data$downs.outcome) | is.na(data$down) | as.numeric(data$down) < 1 |
+  is.na(data$home.o.dvoa))),]
+downs.model.cols = which(colnames(downs.data) %in% c("downs.outcome", "pos.o.dvoa", "def.d.dvoa", "pos.qb.grade", "ydstogo", "yrdline.group", 
+  "score.diff", "TimeSecs.half.to"))
+downs.train.set = make.downs.data(downs.data, "train", downs.model.cols)
+downs.formula = "as.factor(downs.outcome) ~ pos.o.dvoa + def.d.dvoa + pos.qb.grade + ydstogo   + score.diff + TimeSecs.half.to + 
+  as.factor(yrdline.group)"
+
+#fit boosted forest
+downs.boosted.end.game = make.gbm.downs(downs.train.set, downs.formula, 1000, depth = 2, shrinkage = .02)
+saveRDS(downs.boosted.end.game, file = "final-models/downs.boosted.end.game.Rda")
+
+#test model
+test.set = make.downs.data(downs.data, "test", downs.model.cols)
+downs.model.performance = test.predictions.downs(downs.boosted.end.game, test.set, 7, "gbm")
+
+```
+
+
+#downs ot model
+```{r}
+downs.data = data[which(data$TimeSecs < 900  & data$year >= 2012 &
+  !(str_detect(data$desc, "under review") | 
+  str_detect(data$desc, "END") |
+  data$desc[1:nrow(data)] == c(data$desc[2:nrow(data)], "NA") |
+  is.na(data$downs.outcome) | is.na(data$down) | as.numeric(data$down) < 1 |
+  is.na(data$home.o.dvoa))),]
+#fix incorrect handling of game winning touchdowns
+downs.data$downs.outcome[which(downs.data$downs.outcome == "End Half" & downs.data$TimeSecs > 90)] = "Converted"
+downs.data$downs.outcome[which(downs.data$downs.outcome == "End Half")[6:7]] = "Converted"
+#fix incorrect handling of end of game situations
+downs.data$downs.outcome[which(downs.data$hscore == downs.data$rscore & downs.data$TimeSecs < 90)[c(6:9, 17, 21:22, 27)]] = "End Half"
+downs.data = downs.data %>% filter(!is.na(downs.time.elapsed))
+
+downs.model.cols = which(colnames(downs.data) %in% c("downs.outcome", "pos.o.dvoa", "def.d.dvoa", "pos.qb.grade", "ydstogo", "yrdline.group", "ot", "score.diff", "TimeSecs.half.to", "ot.possession.count"))
+downs.train.set = make.downs.data(downs.data, "train", downs.model.cols)
+downs.formula = "as.factor(downs.outcome) ~ pos.o.dvoa + def.d.dvoa + pos.qb.grade + ydstogo + ot + score.diff + TimeSecs.half.to + as.factor(yrdline.group)"
+
+#fit boosted forest
+downs.boosted.ot = make.gbm.downs(downs.train.set, downs.formula, 1000, depth = 2, shrinkage = .02)
+saveRDS(downs.boosted.ot, file = "final-models/downs.boosted.ot.Rda")
+
+#test models against each other
+test.set = make.downs.data(downs.data, "test", downs.model.cols)
+downs.model.performance = test.predictions.downs(downs.boosted.ot, test.set, 6, "gbm")
+```
+
+#fit models for time elapsed until the next set of downs
+```{r}
+downs.remove.indices = which(
+  str_detect(data$desc, "under review") | 
+  str_detect(data$desc, "END") | 
+  data$desc[1:nrow(data)] == c(data$desc[2:nrow(data)], "NA") |
+  is.na(data$downs.outcome) | is.na(data$down) | as.numeric(data$down) < 1 |
+  is.na(data$home.o.dvoa) | data$downs.outcome == "End Half")
+downs.data = data[-downs.remove.indices,]
+downs.data$downs.outcome = as.factor(downs.data$downs.outcome)
+
+#try predicting number of penalties
+penalty.gbm = gbm(penalty ~ downs.outcome + down + yrdline100, data=downs.data[downs.data$year < 2017, which(colnames(downs.data) %in% c("downs.outcome", "down", "yrdline100", "penalty", "n.plays.until.1st"))], distribution ="bernoulli", shrinkage = .005, n.trees = 1000, interaction.depth = 1)
+saveRDS(penalty.gbm, file = "final-models/penalty.gbm.Rda")
+
+pred.gbm = predict(penalty.gbm, data=downs.data[downs.data$year == 2017, ], type = "response", n.trees = 1000)
+loss = mean(ifelse(downs.data$penalty[downs.data$year == 2017] == 1, log(pred.gbm), log(1-pred.gbm)))
+
+#predictions for downs, punts, field goals is 4 - down + 1 + num penalties
+downs.data$four.downs = ifelse(downs.data$downs.outcome == "Punt" | downs.data$downs.outcome == "Field Goal" | 
+  downs.data$downs.outcome == "Downs", 1, 0) 
+pred.plays = 5 - as.numeric(downs.data$down[which(downs.data$year == 2017 & downs.data$four.downs == 1)])
+pred.4.down.penalty.rate = predict(penalty.gbm, downs.data[downs.data$year == 2017 & downs.data$four.downs == 1, ], type = "response", n.trees = 1000)
+pred.penalties = rbinom(length(pred.plays), pred.plays, prob = pred.4.down.penalty.rate)
+pred.4.downs = pred.plays + pred.penalties
+mse = mean((pred.4.downs - as.numeric(downs.data$n.plays.until.1st[which(downs.data$year == 2017 & 
+  downs.data$four.downs == 1)]))^2)
+
+#get predictions for outcomes that could happen on any of 4 downs
+converted.dist = downs.data$down[which(downs.data$year[1:(nrow(downs.data)-1)] < 2017 & 
+  downs.data$downs.outcome[1:(nrow(downs.data)-1)] == "Converted" & downs.data$down[2:nrow(downs.data)] == "1" & 
+  !((str_detect(data$desc[1:(nrow(downs.data)-1)], paste("PENALTY on", downs.data$posteam[1:(nrow(downs.data)-1)]))) & 
+  downs.data$down[1:(nrow(downs.data) - 1)] == "1"))]
+converted.dist = c(length(which(converted.dist == 1))/length(converted.dist), 
+  length(which(converted.dist == 2))/length(converted.dist), length(which(converted.dist == 3))/length(converted.dist), 
+  length(which(converted.dist == 4))/length(converted.dist))
+saveRDS(converted.dist, file = "final-models/converted.dist.Rda")
+
+turnover.dist = downs.data$down[which(downs.data$year[1:(nrow(downs.data)-1)] < 2017 & 
+  downs.data$downs.outcome[1:(nrow(downs.data)-1)] == "Turnover" & downs.data$posteam[1:(nrow(downs.data)-1)] != 
+  downs.data$posteam[2:nrow(downs.data)])]
+turnover.dist = c(length(which(turnover.dist == 1))/length(turnover.dist), 
+  length(which(turnover.dist == 2))/length(turnover.dist), length(which(turnover.dist == 3))/length(turnover.dist), 
+  length(which(turnover.dist == 4))/length(turnover.dist))
+saveRDS(turnover.dist, file = "final-models/turnover.dist.Rda")
+
+safety.dist = downs.data$down[which(downs.data$year[1:(nrow(downs.data)-1)] < 2017 & 
+  downs.data$downs.outcome[1:(nrow(downs.data)-1)] == "Safety" & downs.data$posteam[1:(nrow(downs.data)-1)] != 
+  downs.data$posteam[2:nrow(downs.data)])]
+safety.dist = c(length(which(safety.dist == 1))/length(safety.dist), 
+  length(which(safety.dist == 2))/length(safety.dist), length(which(safety.dist == 3))/length(safety.dist), 
+  length(which(safety.dist == 4))/length(safety.dist))
+saveRDS(safety.dist, file = "final-models/safety.dist.Rda")
+
+pred.converted.plays = rep(NA, length(which(downs.data$downs.outcome == "Converted")))
+pred.converted.downs = as.numeric(downs.data$down[which(downs.data$downs.outcome == "Converted")])
+for(i in c(1:length(pred.converted.plays))){
+  down = pred.converted.downs[i]
+  end = 5 - down
+  pred.converted.plays[i] = sample(c(1:end), 1, prob = converted.dist[down:4]/sum(converted.dist[down:4]))
+}
+pred.converted.penalty.rate = predict(penalty.gbm, downs.data[downs.data$year == 2017 & downs.data$downs.outcome == "Converted", ],
+  type = "response", n.trees = 1000)
+pred.penalties = rbinom(length(pred.converted.plays), pred.converted.plays, prob = pred.converted.penalty.rate)
+pred.converted.plays = pred.converted.plays + pred.penalties
+mse = mean((pred.converted.plays - as.numeric(downs.data$n.plays.until.1st[downs.data$downs.outcome == "Converted"]))^2)
+hist(as.numeric(downs.data$n.plays.until.1st[downs.data$downs.outcome == "Converted"]) - pred.converted.plays, breaks = 8)
+
+pred.turnover.plays = rep(NA, length(which(downs.data$downs.outcome == "Turnover" & downs.data$year == 2017)))
+for(i in c(1:length(pred.turnover.plays))){
+  down = as.numeric(downs.data$down[which(downs.data$downs.outcome == "Turnover" & downs.data$year == 2017)[i]])
+  end = 5 - down
+  pred.turnover.plays[i] = sample(c(1:end), 1, prob = turnover.dist[down:4]/sum(turnover.dist[down:4]))
+}
+pred.turnover.penalty.rate = predict(penalty.gbm, downs.data[downs.data$year == 2017 & downs.data$downs.outcome == "Turnover", ], 
+  type = "response", n.trees = 1000)
+pred.penalties = rbinom(length(pred.turnover.plays), pred.turnover.plays, prob = pred.turnover.penalty.rate)
+pred.turnover.plays = pred.turnover.plays + pred.penalties
+mse = mean((pred.turnover.plays - as.numeric(downs.data$n.plays.until.1st[downs.data$downs.outcome == "Turnover" & downs.data$year == 2017]))^2)
+hist(as.numeric(downs.data$n.plays.until.1st[downs.data$downs.outcome == "Turnover" & downs.data$year == 2017]) - pred.turnover.plays, breaks = 10)
+
+pred.safety.plays = rep(NA, length(which(downs.data$downs.outcome == "Safety" & downs.data$year == 2017)))
+for(i in c(1:length(pred.safety.plays))){
+  down = as.numeric(downs.data$down[which(downs.data$downs.outcome == "Safety" & downs.data$year == 2017)[i]])
+  end = 5 - down
+  pred.safety.plays[i] = sample(c(1:end), 1, prob = safety.dist[down:4]/sum(safety.dist[down:4]))
+}
+pred.safety.penalty.rate = predict(penalty.gbm, downs.data[downs.data$year == 2017 & downs.data$downs.outcome == "Safety", ], 
+  type = "response", n.trees = 1000)
+pred.penalties = rbinom(length(pred.safety.plays), pred.safety.plays, prob = pred.safety.penalty.rate)
+pred.safety.plays = pred.safety.plays + pred.penalties
+mse = mean((pred.safety.plays - as.numeric(downs.data$n.plays.until.1st[downs.data$downs.outcome == "Safety" & downs.data$year == 2017]))^2)
+hist(as.numeric(downs.data$n.plays.until.1st[downs.data$downs.outcome == "Safety" & downs.data$year == 2017]) - pred.safety.plays, breaks = 10)
+
+#now created model for ratio of clock stops to running plays
+downs.n.clock.stop.gbm = gbm(clock.stopped ~ downs.clock.will.stop + downs.n.plays.until.1st + downs.TimeSecs.half.to + 
+  as.factor(downs.comeback.score) + downs.outcome, data = downs.data[downs.data$year < 2017, ], n.trees = 1000, shrinkage = .05,
+  interaction.depth = 2, distribution = "bernoulli")
+saveRDS(downs.n.clock.stop.gbm, file = "final-models/downs.n.clock.stop.gbm.Rda")
+pred.gbm = predict(downs.n.clock.stop.gbm, downs.data[downs.data$year == 2017,], type = "response", n.trees = 500)
+loss = mean(ifelse(downs.data$clock.stopped[downs.data$year == 2017] == 1, log(pred.gbm), log(1-pred.gbm)))
+
+#test overall mse after sampling from binomial with ratio specified by model
+pred = rbinom(n = length(which(downs.data$year == 2017)), 
+  size = as.numeric(downs.data$n.plays.until.1st[downs.data$year == 2017]),
+  prob = pred.gbm)
+mse = mean((pred - as.numeric(downs.data$n.clock.stop.until.1st[downs.data$year == 2017]))^2)
+
+#create model for clock stopped play length
+#check which downs.data have play length of 0 (error) and remove them and the next play if they arent a penalty after a stoppage or a spike
+plays.rm = which((downs.data$play.length[2:nrow(downs.data)] == 0  & 
+  !((str_detect(downs.data$desc[2:nrow(downs.data)], "PENALTY") & 
+  downs.data$clock.stopped[1:(nrow(downs.data)-1)] == 1) | 
+  downs.data$PlayType[2:nrow(downs.data)] == "Spike")))
+plays.rm1 = which((downs.data$play.length > 55 & 
+  downs.data$posteam_timeouts_pre - 
+  c(downs.data$posteam_timeouts_pre[2:nrow(downs.data)], 99) >= 1 & 
+  downs.data$defteam_timeouts_pre - 
+  c(downs.data$defteam_timeouts_pre[2:nrow(downs.data)], 99) >= 1) |
+  downs.data$play.length < 0 | downs.data$play.length > 75 | is.na(downs.data$play.length))
+plays.rm = unique(sort(c(plays.rm+1, plays.rm+2, plays.rm1)))
+downs.data = downs.data[-plays.rm,]
+
+#model for running clock (lms are about the same but mixed model doesn't converge)
+train.data = downs.data[which(downs.data$clock.stopped == 0 & downs.data$year < 2017), ]
+simple.play.length.running = lm(data = train.data, play.length ~ as.factor(down)*ydstogo + comeback.score)
+saveRDS(simple.play.length.running, file = "final-models/running.play.length.Rda")
+test.data = downs.data[which(downs.data$clock.stopped == 0 & downs.data$year == 2017), ]
+pred = predict(simple.play.length.running, newdata = test.data)
+mse = mean((pred-test.data$play.length)^2)
+
+#model for stopped clock (final-models perform about the same)
+#maybe go back and make sure model knows that punts take a few seconds longer
+train.data = downs.data[which(downs.data$clock.stopped == 1 & downs.data$year < 2017), ]
+simple.play.length.stopped = lm(data = train.data, play.length ~ comeback.score + as.factor(down)*ydstogo)
+saveRDS(simple.play.length.stopped, file = "final-models/stopped.play.length.Rda")
+
+test.data = downs.data[which(downs.data$clock.stopped == 1 & downs.data$year == 2017), ]
+pred = predict(simple.play.length.stopped, newdata = test.data)
+mse = mean((pred-test.data$play.length)^2)
+```
+
+#model for yards gained
+```{r}
+downs.remove.indices = which(
+  str_detect(data$desc, "under review") | 
+  str_detect(data$desc, "END") | 
+  data$desc[1:nrow(data)] == c(data$desc[2:nrow(data)], "NA") |
+  is.na(data$downs.outcome) |
+  is.na(data$home.o.dvoa) | data$downs.outcome == "End Half" |
+  is.na(data$downs.yrds.gained))
+downs.data = data[-downs.remove.indices,]
+downs.data$downs.outcome = as.factor(downs.data$downs.outcome)
+downs.data$downs.conversion.by.penalty = ifelse(is.na(downs.data$downs.conversion.by.penalty), 0, downs.data$downs.conversion.by.penalty)
+
+#fit individual models for each outcome type (and one for downs 1-3 and one for 4)
+#fit 2 models, one for downs 1-3 and one for 4th
+penalty.converted.yrds.gained.models = as.list(c(1:2))
+penalty.converted.yrds.gained.models[[1]] = lm(downs.yrds.gained ~ sqrt(yrdline100) + 
+  as.factor(down)*ydstogo, data = downs.data[which(downs.data$downs.outcome ==  
+  "Converted" & as.numeric(downs.data$down) < 4 & downs.data$year < 2017 & 
+  downs.data$downs.conversion.by.penalty),])
+plot(density(penalty.converted.yrds.gained.models[[1]]$residuals))
+
+penalty.converted.yrds.gained.models[[2]] = lm(downs.yrds.gained ~ sqrt(yrdline100) + 
+  ydstogo, data = downs.data[which(downs.data$downs.outcome ==  
+  "Converted" & as.numeric(downs.data$down) == 4 & downs.data$year < 2017 & 
+  downs.data$downs.conversion.by.penalty),])
+plot(density(penalty.converted.yrds.gained.models[[2]]$residuals))
+saveRDS(penalty.converted.yrds.gained.models, file = 
+  "final-models/penalty.converted.yrds.gained.models.Rda")
+
+#also fit model for probability of a conversion being due to penalty ... glm and gbm were about same
+conversion.by.penalty.prob = glm(downs.conversion.by.penalty ~ as.factor(down)*ydstogo,
+  data = downs.data[which(downs.data$year < 2017 & downs.data$downs.outcome == "Converted" & downs.data$downs.off.td != 1 & 
+  downs.data$ydstogo < downs.data$yrdline100),])
+saveRDS(conversion.by.penalty.prob, file = 
+  "final-models/conversion.by.penalty.prob.Rda")
+
+pred = predict(conversion.by.penalty.prob, downs.data[which(downs.data$year == 2017 & 
+  downs.data$downs.outcome == "Converted" & downs.data$downs.off.td != 1),])
+pred = ifelse(downs.data$ydstogo[which(downs.data$year == 2017 & downs.data$downs.outcome == "Converted" & 
+  downs.data$downs.off.td != 1)] >= downs.data$yrdline100[which(downs.data$year == 2017 & 
+  downs.data$downs.outcome == "Converted" & downs.data$downs.off.td != 1)], 1, pred)
+loss = mean(ifelse(downs.data$downs.conversion.by.penalty[which(downs.data$year == 2017 & downs.data$downs.outcome == "Converted" & downs.data$downs.off.td != 1)] == 1, log(pred), log(1-pred)))
+
+#fit regular yards gained lms
+converted.yrds.gained.models = as.list(c(1:4))
+converted.yrds.gained.models[[1]] = as.list(c(1:2))
+
+converted.yrds.gained.models[[1]][[1]] = lm(downs.yrds.gained ~ pos.o.dvoa  + sqrt(yrdline100) + ydstogo, 
+  data = downs.data[which(downs.data$downs.outcome ==  "Converted" & as.numeric(downs.data$down) == 1 & downs.data$ydstogo < 10 & downs.data$year < 2017
+  & !downs.data$downs.conversion.by.penalty),])
+plot(density(converted.yrds.gained.models[[1]][[1]]$residuals))
+
+converted.yrds.gained.models[[1]][[2]] = lm(downs.yrds.gained ~ pos.o.dvoa + def.d.dvoa + sqrt(yrdline100) + ydstogo, data = downs.data[which(downs.data$downs.outcome ==  "Converted" & as.numeric(downs.data$down) == 1 & downs.data$ydstogo > 10 & downs.data$year < 2017 & !downs.data$downs.conversion.by.penalty),])
+plot(density(converted.yrds.gained.models[[1]][[2]]$residuals))
+
+converted.yrds.gained.models[[2]] = lm(downs.yrds.gained ~ pos.o.dvoa + def.d.dvoa + sqrt(yrdline100) + 
+  ydstogo, data = downs.data[which(downs.data$downs.outcome ==  "Converted" & 
+  as.numeric(downs.data$down) == 2 & downs.data$year < 2017 & !downs.data$downs.conversion.by.penalty),])
+plot(density(converted.yrds.gained.models[[2]]$residuals))
+
+converted.yrds.gained.models[[3]] = lm(downs.yrds.gained ~ sqrt(yrdline100) + ydstogo + pos.qb.grade, 
+  data = downs.data[which(downs.data$downs.outcome ==  "Converted" & as.numeric(downs.data$down) == 3 & 
+  downs.data$year < 2017 & !downs.data$downs.conversion.by.penalty),])
+plot(density(converted.yrds.gained.models[[3]]$residuals))
+
+converted.yrds.gained.models[[4]] = lm(downs.yrds.gained ~ pos.o.dvoa + sqrt(yrdline100) +
+  ydstogo, data = downs.data[which(downs.data$downs.outcome ==  "Converted" & as.numeric(downs.data$down) == 
+  4 & downs.data$downs.yrds.gained > 0 & downs.data$year < 2017 & !downs.data$downs.conversion.by.penalty),])
+plot(density(converted.yrds.gained.models[[4]]$residuals))
+saveRDS(converted.yrds.gained.models, file = 
+  "final-models/converted.yrds.gained.models.Rda")
+
+#now fit other yards gained models
+
+#start with punts...just separate punts into downs 1-3 and 4
+punts.yrds.gained.models = as.list(c(1:2))
+punts.yrds.gained.models[[1]] = lm(downs.yrds.gained ~ pos.st.dvoa + def.st.dvoa + sqrt(yrdline100) + 
+   ydstogo, data = downs.data[which(downs.data$downs.outcome == "Punt" & as.numeric(downs.data$down) < 4 & 
+  downs.data$year < 2017),])
+plot(density(punts.yrds.gained.models[[1]]$residuals))
+
+punts.yrds.gained.models[[2]] = lm(downs.yrds.gained ~ pos.st.dvoa + def.st.dvoa + sqrt(yrdline100),
+  data = downs.data[which(downs.data$downs.outcome == "Punt" & as.numeric(downs.data$down) == 4 & 
+  downs.data$year < 2017),])
+plot(density(punts.yrds.gained.models[[2]]$residuals))
+saveRDS(punts.yrds.gained.models, file = 
+  "final-models/punts.yrds.gained.models.Rda")
+
+#now for turnovers...just separate turnovers into downs 1-3 and 4
+turnovers.yrds.gained.models = as.list(c(1:2))
+turnovers.yrds.gained.models[[1]] = lm(downs.yrds.gained ~ pos.qb.grade + sqrt(yrdline100) + ydstogo, 
+  data = downs.data[which(downs.data$downs.outcome == "Turnover" & as.numeric(downs.data$down) < 4 & 
+  downs.data$year < 2017),])
+plot(density(turnovers.yrds.gained.models[[1]]$residuals))
+
+turnovers.yrds.gained.models[[2]] = lm(downs.yrds.gained ~ pos.qb.grade + sqrt(yrdline100) + ydstogo, 
+  data = downs.data[which(downs.data$downs.outcome == "Turnover" & as.numeric(downs.data$down) == 4 & 
+  downs.data$year < 2017),])
+plot(density(turnovers.yrds.gained.models[[2]]$residuals))
+saveRDS(turnovers.yrds.gained.models, file = 
+  "final-models/turnovers.yrds.gained.models.Rda")
+
+#now for downs...maybe separate downs into downs 1-3 and 4...check residuals
+downs.turnover.yrds.gained.models = as.list(c(1:2))
+downs.turnover.yrds.gained.models[[1]] = lm(downs.yrds.gained ~ pos.qb.grade + ydstogo +
+  sqrt(TimeSecs.adj)*sqrt(yrdline100), 
+  data = downs.data[which(downs.data$downs.outcome == "Downs" & as.numeric(downs.data$down) < 4 & 
+  downs.data$year < 2017),])
+plot(density(downs.turnover.yrds.gained.models[[1]]$residuals))
+
+downs.turnover.yrds.gained.models[[2]] = lm(downs.yrds.gained ~ ydstogo, 
+  data = downs.data[which(downs.data$downs.outcome == "Downs" & as.numeric(downs.data$down) == 4 & 
+  downs.data$year < 2017),])
+plot(density(downs.turnover.yrds.gained.models[[2]]$residuals))
+saveRDS(downs.turnover.yrds.gained.models, file = 
+  "final-models/downs.turnover.yrds.gained.models.Rda")
+
+#now for field goals...index 1 is regular miss for downs 1-3, indices 2-3 are for blocks
+fg.miss.yrds.gained = downs.data$downs.yrds.gained[which(downs.data$downs.outcome == "Field Goal" & 
+  as.numeric(downs.data$down) < 4 & downs.data$downs.outcome.fg.block == "No Good")]
+plot(density(fg.miss.yrds.gained))
+
+fg.yrds.gained.models = as.list(c(1:3))
+fg.yrds.gained.models[[1]] = lm(downs.yrds.gained ~ ydstogo*as.factor(down) + def.d.dvoa, 
+  data = downs.data[which(downs.data$downs.outcome == "Field Goal" & as.numeric(downs.data$down) < 4 & 
+  downs.data$year < 2017 & downs.data$downs.outcome.fg.block == "No Good"),])
+plot(density(fg.yrds.gained.models[[1]]$residuals))
+
+fg.yrds.gained.models[[2]] = lm(downs.yrds.gained ~ ydstogo + def.d.dvoa + sqrt(yrdline100), 
+  data = downs.data[which(downs.data$downs.outcome == "Field Goal" & as.numeric(downs.data$down) < 4 & 
+  downs.data$year < 2017 & downs.data$downs.outcome.fg.block == "Blocked"),])
+plot(density(fg.yrds.gained.models[[2]]$residuals))
+
+fg.yrds.gained.models[[3]] = lm(downs.yrds.gained ~ sqrt(yrdline100), 
+  data = downs.data[which(downs.data$downs.outcome == "Field Goal" & as.numeric(downs.data$down) == 4 & 
+  downs.data$year < 2017 & downs.data$downs.outcome.fg.block == "Blocked"),])
+plot(density(fg.yrds.gained.models[[3]]$residuals))
+saveRDS(fg.yrds.gained.models, file = "final-models/fg.yrds.gained.models.Rda")
+
+```
+
+#fit models for proportion of different downs outcomes that lead to touchdowns
+```{r}
+touchdown.data = data[which(data$downs.outcome == "Converted"),]
+
+#gbm far outperforms other models...try different values for shrinkage
+td.model.gbm = gbm(downs.off.td ~ pos.o.dvoa + def.d.dvoa + yrdline100 + as.factor(down) + pos.qb.grade + ydstogo, data = touchdown.data[touchdown.data$year < 2017, which(colnames(touchdown.data) %in% c("downs.off.td", "yrdline100", "pos.o.dvoa", "def.d.dvoa", "down", "pos.qb.grade", "ydstogo"))], distribution = "bernoulli", shrinkage = .02, n.trees = 1000, interaction.depth = 2)
+pred = predict(td.model.gbm, touchdown.data[touchdown.data$year == 2017,], type = "response", n.trees = 200)
+loss = mean(ifelse(touchdown.data$downs.off.td == 1, log(pred), log(1-pred)))
+mse = mean(ifelse(touchdown.data$downs.off.td == 1, (1-pred)^2, pred^2))
+#probably of conversion resulting in a touchdown by yardline
+mean.pred = rep(NA, 99)
+for(i in c(1:99)){
+  mean.pred[i] = mean(pred[which(touchdown.data$yrdline100[which(touchdown.data$year == 2017)] == i)])
+}
+plot(mean.pred ~ c(1:99))
+saveRDS(td.model.gbm, file = "final-models/td.model.Rda")
+
+#punt td model
+punt.td.data = data[which(data$downs.outcome == "Punt"),]
+punt.model.gbm = gbm(downs.def.td ~ pos.st.dvoa + def.st.dvoa + yrdline100, data = punt.td.data[punt.td.data$year < 2017, which(colnames(punt.td.data) %in% c("downs.def.td", "yrdline100", "pos.st.dvoa", "def.st.dvoa"))], distribution = "bernoulli", shrinkage = .005, n.trees = 1000, interaction.depth = 2)
+pred = predict(punt.model.gbm, punt.td.data[punt.td.data$year == 2017,], type = "response", n.trees = 500)
+loss = mean(ifelse(punt.td.data$downs.def.td == 1, log(pred), log(1-pred)))
+mse = mean(ifelse(punt.td.data$downs.def.td == 1, (1-pred)^2, pred^2))
+#punt td prob by yrdline
+mean.pred = rep(NA, 99)
+for(i in c(1:99)){
+  mean.pred[i] = mean(pred[which(punt.td.data$yrdline100[which(punt.td.data$year == 2017)] == i)])
+}
+plot(mean.pred ~ c(1:99))
+saveRDS(punt.model.gbm, file = "final-models/punt.td.model.Rda")
+
+#turnover td model
+turnover.td.data = data[which(data$downs.outcome == "Turnover"),]
+turnover.model.gbm = gbm(downs.def.td ~ pos.o.dvoa + def.d.dvoa + sqrt(yrdline100), data = turnover.td.data[turnover.td.data$year < 2017, which(colnames(turnover.td.data) %in% c("downs.def.td", "yrdline100", "pos.o.dvoa", "def.d.dvoa"))], distribution = "bernoulli", shrinkage = .02, n.trees = 1000, interaction.depth = 2)
+pred = predict(turnover.model.gbm, turnover.td.data[turnover.td.data$year == 2017,], type = "response", n.trees = 500)
+loss = mean(ifelse(turnover.td.data$downs.def.td == 1, log(pred), log(1-pred)))
+mse = mean(ifelse(turnover.td.data$downs.def.td == 1, (1-pred)^2, pred^2))
+#turnover td prob by yrdline
+mean.pred = rep(NA, 99)
+for(i in c(1:99)){
+  mean.pred[i] = mean(pred[which(turnover.td.data$yrdline100[which(turnover.td.data$year == 2017)] == i)])
+}
+plot(mean.pred ~ c(1:99))
+saveRDS(turnover.model.gbm, file = "final-models/turnover.td.model.Rda")
+
+#fg block td model...none are very effective, just output fg.block -> td probability as "model"
+fg.block.td.data = data[which(data$downs.outcome == "Field Goal" & data$downs.outcome.fg.block == "Blocked"),]
+fg.block.td.gbm = gbm(downs.def.td ~ sqrt(yrdline100), data = fg.block.td.data[fg.block.td.data$year < 2017, which(colnames(fg.block.td.data) %in% c("downs.def.td", "yrdline100", "pos.o.dvoa", "def.d.dvoa"))], distribution = "bernoulli", shrinkage = .01, n.trees = 1000, interaction.depth = 2)
+pred = predict(fg.block.td.gbm, fg.block.td.data[fg.block.td.data$year == 2017,], type = "response", n.trees = 100)
+loss = mean(ifelse(fg.block.td.data$downs.def.td == 1, log(pred), log(1-pred)))
+mse = mean(ifelse(fg.block.td.data$downs.def.td == 1, (1-pred)^2, pred^2))
+#fg block td | fg block by yardline
+mean.pred = rep(NA, 99)
+for(i in c(1:99)){
+  mean.pred[i] = mean(pred[which(fg.block.td.data$yrdline100[which(fg.block.td.data$year == 2017)] == i)])
+}
+plot(mean.pred ~ c(1:99))
+saveRDS(fg.block.td.gbm, file = "final-models/fg.block.td.model.Rda")
+
+#fg.make models
+fg.make.data = data[which(data$downs.outcome == "Field Goal"), which(colnames(data) %in% c("FieldGoalResult", "yrdline100", "downs.yrds.gained", "downs.def.td", "year", "down", "downs.outcome.fg", "downs.outcome.fg.block"))]
+fg.model.gbm = gbm(downs.outcome.fg ~ yrdline100 + as.factor(down), data = fg.make.data[fg.make.data$year < 2017, which(colnames(fg.make.data) %in% c("downs.outcome.fg", "yrdline100", "down"))], distribution = "bernoulli", shrinkage = .01, n.trees = 1000)
+pred = predict(fg.model.gbm, fg.make.data[fg.make.data$year == 2017,], type = "response", n.trees = 500)
+loss = mean(ifelse(fg.make.data$downs.outcome.fg == "1", log(pred), log(1-pred)))
+mse = mean(ifelse(fg.make.data$downs.outcome.fg == "1", (1-pred)^2, pred^2))
+#fg make prob by yrdline
+mean.pred = rep(NA, 55)
+for(i in c(1:55)){
+  mean.pred[i] = mean(pred[which(fg.make.data$yrdline100[which(fg.make.data$year == 2017)] == i)])
+}
+plot(mean.pred ~ c(1:55))
+saveRDS(fg.model.gbm, file = "final-models/fg.make.model.Rda")
+
+fg.make.data$downs.outcome.fg.block[which(is.na(fg.make.data$downs.outcome.fg.block))] = "Blocked"
+fg.make.data$downs.outcome.fg.block = ifelse(fg.make.data$downs.outcome.fg.block == "Blocked", 1, 0)
+fg.block.model.gbm = gbm(downs.outcome.fg.block ~ yrdline100 + as.factor(down), data = fg.make.data[fg.make.data$year < 2017 & fg.make.data$downs.outcome.fg == "0", which(colnames(fg.make.data) %in% c("downs.outcome.fg.block", "yrdline100", "down"))], distribution = "bernoulli", shrinkage = .01, n.trees = 1000)
+pred = predict(fg.block.model.gbm, fg.make.data[fg.make.data$year == 2017 & fg.make.data$downs.outcome.fg == "0",], type = "response", n.trees = 500)
+loss = mean(ifelse(fg.make.data$downs.outcome.fg.block[fg.make.data$year == 2017 & fg.make.data$downs.outcome.fg == "0"] == "Blocked", log(pred), log(1-pred)))
+mse = mean(ifelse(fg.make.data$downs.outcome.fg[fg.make.data$year == 2017 & fg.make.data$downs.outcome.fg == "0"] == "Blocked", (1-pred)^2, pred^2))
+#prob of fg block | fg miss by yardline
+mean.pred = rep(NA, 55)
+for(i in c(1:55)){
+  mean.pred[i] = mean(pred[which(fg.make.data$yrdline100[fg.make.data$year == 2017 & fg.make.data$downs.outcome.fg == "0"] == i)])
+}
+plot(mean.pred ~ c(1:55))
+saveRDS(fg.block.model.gbm, file = "final-models/fg.block.model.Rda")
+```
+
+kickoff outcome models
+#go back and add mixed models once final model is finished and figured out how to weight probability of defensive/offensive safety for ot and end half situations
+```{r}
+data.kickoffs = data %>% filter(down == 1 & ydstogo == 10 & !is.na(data$kickoff.outcome.model))
+data.kickoffs$kickoff.outcome.model = as.factor(data.kickoffs$kickoff.outcome.model)
+data.kickoffs = data.kickoffs[-which(is.na(data.kickoffs$kickoff.n.plays.until.kickoff)),]
+cols = which(colnames(data.kickoffs) %in% c("pos.o.dvoa", "pos.d.dvoa", "posteam", "def.o.dvoa", "def.d.dvoa",
+  "DefensiveTeam", "score.diff", "comeback.score", "TimeSecs.half.to", "pos.line", "desc", 
+  "kickoff.outcome.model", "pos.win"))
+
+kickoffs.simple.lm.normal = multinom(kickoff.outcome.model ~ pos.o.dvoa + pos.d.dvoa + pos.st.dvoa + def.o.dvoa + def.d.dvoa + def.st.dvoa + comeback.score + TimeSecs.half.to + yrdline100, data = data.kickoffs[which(data.kickoffs$year < 2017 & data.kickoffs$TimeSecs > 300 & !(data.kickoffs$TimeSecs > 1800 & data.kickoffs$TimeSecs <= 1980)),])
+saveRDS(kickoffs.simple.lm.normal, file = "final-models/kickoff.simple.lm.normal.Rda")
+
+kickoffs.simple.lm.4th = multinom(kickoff.outcome.model ~ pos.o.dvoa + pos.d.dvoa + pos.st.dvoa + def.o.dvoa + def.d.dvoa + def.st.dvoa + comeback.score + TimeSecs.half.to + yrdline100, data = data.kickoffs[which(data.kickoffs$year < 2017 & data.kickoffs$TimeSecs <= 300 & data.kickoffs$TimeSecs > 0),])
+saveRDS(kickoffs.simple.lm.4th, file = "final-models/kickoff.simple.lm.4th.Rda")
+
+kickoffs.simple.lm.ot = multinom(kickoff.outcome.model ~ pos.o.dvoa + pos.d.dvoa + pos.st.dvoa + 
+  def.o.dvoa + def.d.dvoa + def.st.dvoa + TimeSecs.half.to + yrdline100, data = 
+  data.kickoffs[which(data.kickoffs$year < 2017 & data.kickoffs$TimeSecs < 0),])
+saveRDS(kickoffs.simple.lm.ot, file = "final-models/kickoff.simple.lm.ot.Rda")
+
+kickoffs.simple.lm.end.half = multinom(kickoff.outcome.model ~ pos.o.dvoa + pos.d.dvoa + pos.st.dvoa + 
+  def.o.dvoa + def.d.dvoa + def.st.dvoa + TimeSecs.half.to + yrdline100, data = 
+  data.kickoffs[which(data.kickoffs$year < 2017 & (data.kickoffs$TimeSecs > 1800 & data.kickoffs$TimeSecs <= 1980)),])
+saveRDS(kickoffs.simple.lm.end.half, file = "final-models/kickoff.simple.lm.end.half.Rda")
+
+#TODO: insert prediction tests
+
+#now get models for the number of plays until kickoff and the number of clock.stops until kickoff...lm beats out gamlss
+n.plays.until.kickoff.lm = lm(n.plays.until.kickoff ~ pos.o.dvoa + pos.d.dvoa + def.o.dvoa + def.d.dvoa + 
+  comeback.score*sqrt(yrdline100) + sqrt(TimeSecs.half.to) + kickoff.outcome.model, data = data.kickoffs[which(data.kickoffs$year < 2017),])
+saveRDS(n.plays.until.kickoff.lm, file = "final-models/kickoff.n.plays.lm.Rda")
+
+pred = predict(n.plays.until.kickoff.lm, data.kickoffs[which(data.kickoffs$year == 2017),])
+mse = mean((pred - data.kickoffs$n.plays.until.kickoff[which(data.kickoffs$year == 2017)])^2)
+
+#fit distribution to residual plot to get se of residuals if they follow lognorm distribution
+test = fitdist(data.kickoffs$n.plays.until.kickoff[data.kickoffs$year < 2017], distr="lnorm", method="mle")
+saveRDS(test$estimate[2], file = "final-models/n.plays.lnorm.sigma.Rda")
+
+#check validity of chosen distribution
+plot(density(data.kickoffs$n.plays.until.kickoff))
+plot((dLOGNO(x = c(0:100), mu=2.285266, sigma = .7470352)))
+
+#check to see if yardline has nonlinear effect
+yrdline.residuals = c(11:99)
+for(i in c(1:89)){
+  yrdline.residuals[i] = mean(n.plays.until.kickoff.lm$residuals[which(data.kickoffs$yrdline100[which(data.kickoffs$year < 2017)] == i+10)])
+}
+plot(yrdline.residuals ~ c(11:99))
+
+#check to see if timesec.half.to has nonlinear effect
+time.residuals = c(1:180)
+for(i in c(1:180)){
+  time.residuals[i] = mean(n.plays.until.kickoff.lm$residuals[which(ceiling(data.kickoffs$TimeSecs.half.to[which(data.kickoffs$year < 2017)]/10) == i)])
+}
+plot(time.residuals ~ c(1:180))
+
+#predict ratio of clock stops to plays
+n.clock.stop.until.kickoff.gbm = gbm(clock.stopped ~ kickoff.clock.will.stop + 
+  kickoff.n.plays.until.kickoff + kickoff.TimeSecs.half.to + kickoff.comeback.score, data = data.kickoffs[data.kickoffs$year < 2017,],
+  interaction.depth = 1, shrinkage = .02, n.trees = 1000, distribution = "bernoulli")
+saveRDS(n.clock.stop.until.kickoff.gbm, file = "final-models/kickoff.n.clock.stop.model.Rda")
+pred.gbm = predict(n.clock.stop.until.kickoff.gbm, data.kickoffs[data.kickoffs$year == 2017,], type = "response", n.trees = 300)
+
+#check time residuals...they are weird but they time improves prediction so I'll leave in
+time.residuals = c(1:180)
+for(i in c(1:180)){
+  time.residuals[i] = mean(n.clock.stop.until.kickoff.glm$residuals[which(ceiling(data.kickoffs$TimeSecs.half.to[which(data.kickoffs$year < 2017)]/10) == i)])
+}
+plot(time.residuals ~ c(1:180))
+
+#get mse of sampling with binomial model where prob of a clock stop is ratio predicted by boosted model
+pred = rbinom(n = length(which(data.kickoffs$year == 2017)), 
+  size = data.kickoffs$n.plays.until.kickoff[data.kickoffs$year == 2017],
+  prob = pred.gbm)
+mse = mean((pred - (data.kickoffs$n.clock.stop.until.kickoff[data.kickoffs$year == 2017]/data.kickoffs$n.plays.until.kickoff[data.kickoffs$year == 
+  2017]))^2)
+```
+
+#game outcomes model for ties
+```{r}
+data.tie = data[kickoff.indices,]
+data.tie = data.tie[which(str_detect(data.tie$desc, "kicks")),]
+data.tie$tie = ifelse(data.tie$win.team == "TIE", 1, 0)
+
+#fit model
+tie.model.gbm = gbm(tie ~ yrdline100 + score.diff + ot.kickoff + TimeSecs.ot.zero, data = data.tie[which(data.tie$year < 2017),], shrinkage = .05,
+  n.trees = 1000, distribution = "bernoulli", interaction.depth = 2)
+pred = predict(tie.model.gbm, data = data.tie[which(data.tie$year == 2017),], n.trees = 100, type="response")
+loss = mean(ifelse(data.tie$tie[data.tie$year == 2017] == 1, log(pred), log(1-pred)))
+saveRDS(tie.model.gbm, file = "final-models/tie.model.Rda")
+```
+
+#game outcomes
+```{r}
+# get data
+data.win = data[kickoff.indices,]
+data.win = data.win[-which(!str_detect(data.win$desc, "kicks")),]
+data.win = data.win %>% filter(!is.na(data.win$pos.win))
+data.win$sqrt.TimeSecs.half.to = sqrt(data.win$TimeSecs.half.to+1)
+
+data.win$pos.qb.grade = ifelse(is.na(data.win$pos.qb.grade), 72, data.win$pos.qb.grade)
+data.win$def.qb.grade = ifelse(is.na(data.win$def.qb.grade), 72, data.win$def.qb.grade)
+
+#72 is about the league average qb grade by pff and the list of qbs for matching is exhaustive enough for there to be little reason for bias
+#in the missingness of qb grade...likely just due to a trick play
+data.win.train = data.win[data.win$year < 2017,]
+saveRDS(data.win.train, file = "data.win.train.Rda")
+data.win.test = data.win[data.win$year == 2017,]
+
+#create model for mean of normal
+mu = lm(score.change ~ pos.line.scaled + pos.o.dvoa*score.diff + def.o.dvoa*score.diff + 
+  pos.receive.2nd.half.kickoff*pos.o.dvoa + pos.receive.2nd.half.kickoff*def.o.dvoa, data=data.win.train[data.win.train$TimeSecs > 600,])
+summary(mu)
+saveRDS(mu, file = "final-models/game.outcome.mu.Rda")
+
+#check normality of mu (must bucket by time since variance will get smaller as game goes on)
+for(i in seq(3600, 900, by = -300)){
+  print(i)
+  time.indices = which(data.win.train$TimeSecs[which(data.win.train$TimeSecs > (i-300))] <= i)
+  plot(density(mu$residuals[time.indices]))
+  qqnorm(mu$residuals[time.indices])
+}
+
+#residual plots
+plot(mu$residuals ~ data.win.train$pos.o.dvoa[data.win.train$TimeSecs > 600])
+plot(mu$residuals ~ data.win.train$pos.d.dvoa[data.win.train$TimeSecs > 600])
+plot(mu$residuals ~ data.win.train$def.o.dvoa[data.win.train$TimeSecs > 600])
+plot(mu$residuals ~ data.win.train$def.d.dvoa[data.win.train$TimeSecs > 600])
+plot(mu$residuals ~ data.win.train$score.diff[data.win.train$TimeSecs > 600])
+plot(mu$residuals ~ data.win.train$pos.line.scaled[data.win.train$TimeSecs > 600])
+
+pred = predict(mu, data.win.test[data.win.test$TimeSecs > 600,])
+mse = mean(abs((pred - data.win.test$score.change[data.win.test$TimeSecs > 600])))
+
+#make model for std dev
+data.win.train$deviation.from.mu = rep(NA, nrow(data.win.train))
+data.win.train$deviation.from.mu[data.win.train$TimeSecs > 600] = 
+  data.win.train$score.change[data.win.train$TimeSecs > 600]  + predict(mu, data.win.train[data.win.train$TimeSecs > 600,])
+
+data.win.test$deviation.from.mu = rep(NA, nrow(data.win.test))
+data.win.test$deviation.from.mu[data.win.test$TimeSecs > 600] = 
+  data.win.test$score.change[data.win.test$TimeSecs > 600]  + predict(mu, data.win.test[data.win.test$TimeSecs > 600,])
+
+sigma = lm(abs(deviation.from.mu) ~ sqrt(TimeSecs) + TimeSecs + pos.o.dvoa + def.o.dvoa + pos.d.dvoa + def.d.dvoa + abs(score.diff) + pos.qb.grade*score.diff + def.qb.grade*score.diff, data = data.win.train[data.win.train$TimeSecs > 600,])
+summary(sigma)
+saveRDS(sigma, file = "final-models/game.outcome.sigma.Rda")
+
+
+pred = predict(sigma, data.win.test[data.win.test$TimeSecs > 600,])
+mse = mean(abs((pred - abs(data.win.test$deviation.from.mu[data.win.test$TimeSecs > 600])))^2)
+
+#explore residuals/goodness of fit for std dev
+plot(density(sigma$residuals))
+
+#test model (should be same as testing full model on only kickoffs with > 10 min left)
+mu.pred = predict(mu, data.win.test[data.win.test$TimeSecs > 600,])
+norm.mu = mu.pred + data.win.test$score.diff[data.win.test$TimeSecs > 600]
+pred.win = pnorm(rep(0, nrow(data.win.test[data.win.test$TimeSecs > 600,])), mean = -1*norm.mu, sd = pred)
+win.loss = mean(ifelse(data.win.test$pos.win[data.win.test$TimeSecs > 600] == 1, log(pred.win), 
+  log(1-pred.win)))
+win.mse = mean((data.win.test$pos.win[data.win.test$TimeSecs > 600] - pred.win)^2)
+
+#for regular 4th quarter
+win.boosting.4th = gbm(pos.win ~ pos.line.scaled + score.diff + sqrt(TimeSecs.half.to) + pos.o.dvoa + def.o.dvoa + pos.d.dvoa + def.d.dvoa + pos.qb.grade + def.qb.grade + posteam_timeouts_pre + defteam_timeouts_pre, data = data.win.train[data.win.train$TimeSecs <= 600 & data.win.train$TimeSecs > 0,], interaction.depth = 2, shrinkage = .02, n.trees = 5000, distribution = "bernoulli")
+saveRDS(win.boosting.4th, file = "final-models/game.4th.model.Rda")
+
+pred.win = predict(win.boosting.4th, data.win.test[data.win.test$TimeSecs <= 600 & data.win.test$TimeSecs > 0,], type = "response", n.trees = 500)
+loss = mean(ifelse(data.win.test$pos.win[data.win.test$TimeSecs <= 600 & data.win.test$TimeSecs > 0] == 1,
+  log(pred.win), log(1-pred.win)))
+mse = mean(ifelse(data.win.test$pos.win[data.win.test$TimeSecs <= 600 & data.win.test$TimeSecs > 0] == 0, 
+  pred.win^2, (1-pred.win)^2))
+
+#for ot
+win.boosting.ot = gbm(pos.win ~ pos.line.scaled + score.diff + sqrt(TimeSecs.half.to) + pos.o.dvoa + def.o.dvoa + pos.d.dvoa + def.d.dvoa + pos.qb.grade + def.qb.grade + posteam_timeouts_pre + defteam_timeouts_pre, data = data.win.train[data.win.train$TimeSecs <= 0,], interaction.depth = 2, shrinkage = .02, n.trees = 1000, distribution = "bernoulli")
+saveRDS(win.boosting.ot, file = "final-models/game.ot.model.Rda")
+
+pred.win = predict(win.boosting.ot, data.win.test[data.win.test$TimeSecs <= 0,], type = "response", n.trees = 500)
+loss = mean(ifelse(data.win.test$pos.win[data.win.test$TimeSecs <= 0] == 1,log(pred.win), log(1-pred.win)))
+mse = mean(ifelse(data.win.test$pos.win[data.win.test$TimeSecs <= 0] == 0, pred.win^2, (1-pred.win)^2))
+```
+
