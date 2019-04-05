@@ -21,6 +21,7 @@ Where we define:
 $int =$ Intercept,  
 $\rho =$ = Scaled point spread  
 $s_{curr} =$ Current score differential  
+$s_{curr_{abs}} =$ Absolute current score differential   
 $k =$ Team that receives the second half kickoff^[1 if the team that has the ball will receive the second half kickoff, -1 if the defensive team will receive the second half kickoff, and 0 if the game is already past halftime]  
 $t =$ Time remaining in seconds  
 $pos_o =$ Offensive DVOA for the team possessing the football   
@@ -220,7 +221,7 @@ $outcomeDist =$
 $replaysByPenalty_{i^*} \sim \mathcal{Binom}(downstogo_{i^*}, p_{penalty_i})$ where  
 $p_{penalty_i}$ is taken from a GBM that predicts the probability of a given play being replayed due to penalty. It is listed in the appendix.   
 
-$downstogo_{i^*}$ is set to be $5 -  down__i$ when $outcome_{i^*}$ is a punt, turnover on downs or field goal attempt because those plays are assumed to happen only on fourth down. The multinomial distributions for conversions, turnovers and safeties simply refer to the probability that an outcome of the given type for a set of downs occurs on a given down. Samples from the distributions that imply the event happened on a down that has already occurred are rejected. Penalty replays refers to the number of plays until the next set of downs that will be replayed by penalty. To translate a sampled number of plays into time space we use the same equations and process that was detailed in section 2.2.
+$downstogo_{i^*}$ is set to be $5 - down_i$ when $outcome_{i^*}$ is a punt, turnover on downs or field goal attempt because those plays are assumed to happen only on fourth down. The multinomial distributions for conversions, turnovers and safeties simply refer to the probability that an outcome of the given type for a set of downs occurs on a given down. Samples from the distributions that imply the event happened on a down that has already occurred are rejected. Penalty replays refers to the number of plays until the next set of downs that will be replayed by penalty. To translate a sampled number of plays into time space we use the same equations and process that was detailed in section 2.2.
 
 We next sample whether a given set of downs will result in a scoring play^[All sets of downs where the sampled outcome is a safety are treated as scoring plays]. 
 
