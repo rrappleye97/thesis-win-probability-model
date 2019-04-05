@@ -259,7 +259,7 @@ Samples drawn are rejected if they result in an invalid or illogical game state.
 
 Once we have samples for the number of yards the ball has moved downfield we can fully update each of the game states for which a scoring outcome was not sampled. Each of these $m \leq n$ remaining game states $i^*_1, \: i^*_2, \:..., \:i^*_m \sim I^*$ will then go through the process outlined in 2.2. This will lead to the creation of $M$ new game states $j^*_1, \: j^*_2, \:..., \:j^*_M \sim J^* \:| \: i^*$advanced from each game state $i^*$ and will result in: 
 
-$WinProb_{i^*} = \frac{1}{M}\sum_{j^*}^{J^*}WinProb_{i^*_{nextScore} \: | \: i^*}$, where $WinProb_{j^*} \: | \: i^*$ is:  
+$WinProb_{i^*} = \frac{1}{M}\sum_{j^*}^{J^*}WinProb_{j^* \: | \: i^*}$, where $WinProb_{j^*} \: | \: i^*$ is:  
   $CDF^{-1}(\frac{\hat{\mu}_{j*} + s_{curr_{j*}}}{\hat{\sigma}^{2}_{j*}}\:|\:i^*)$ for $t_{j*}\:|\:i^* > 600$,   
   $GBM_{4th}(j^*\:|\:i^*)$ for $t_{j^*}\:|\:i^*$ such that $0 < t_{j^*} \leq 600$,   
   $GBM_{ot}(j^*\:|\:i^*)$ for $t_{j^*}\:|\:i^* < 0$  

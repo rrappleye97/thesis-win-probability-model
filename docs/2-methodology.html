@@ -115,14 +115,12 @@
 <h2><span class="header-section-number">2.1</span> Modeling Win Probability on Kickoffs and Point After Attempts</h2>
 <p><strong>Model when more than ten minutes remain:</strong><br />
 On kickoffs a win probability is modeled using a variation of the trick PFR uses to implement a normal distribution when deriving win probability for a given game state <span class="math inline">\(i\)</span>:</p>
-<p><span class="math inline">\(\Delta score_i \sim \mathcal{N}(\mu_i,\sigma_i^{2})\)</span> where</p>
-<p><span class="math inline">\(\mu_i = \beta_{int} + \beta_\rho\rho_i + \beta_{pos_o}{pos_o}_i + \beta_{de\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{s_{curr}}s_{curr_i}\:+\)</span><br />
-<span class="math inline">\(\beta_kk_i + \beta_{kpos_o}k_ipos_{o_i} + \beta_{k{de\hspace{-0.1em}f_o}}k_i{de\hspace{-0.1em}f_{o_i}} + \beta_{s_{curr}pos_o}s_{curr_i}pos_{o_i} + \beta_{s_{curr}{de\hspace{-0.1em}f_o}}s_{curr_i}{de\hspace{-0.1em}f_{o_i}} + \epsilon_{\mu}\)</span> where<br />
-<span class="math inline">\(\epsilon_{\mu} \sim \mathcal{N}(0,\sigma_{\epsilon_{\mu}}^{2})\)</span></p>
+<p><span class="math inline">\(\Delta score_i \sim \mathcal{N}(\hat{\mu}_i,\hat{\sigma}^{2}_i)\)</span> where</p>
+<p><span class="math inline">\(\hat{\mu}_i = \beta_{int} + \beta_\rho\rho_i + \beta_{pos_o}{pos_o}_i + \beta_{de\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{s_{curr}}s_{curr_i}\:+\)</span><br />
+<span class="math inline">\(\beta_kk_i + \beta_{kpos_o}k_ipos_{o_i} + \beta_{k{de\hspace{-0.1em}f_o}}k_i{de\hspace{-0.1em}f_{o_i}} + \beta_{s_{curr}pos_o}s_{curr_i}pos_{o_i} + \beta_{s_{curr}{de\hspace{-0.1em}f_o}}s_{curr_i}{de\hspace{-0.1em}f_{o_i}}\)</span></p>
 <p>and</p>
-<p><span class="math inline">\(\sigma_i = \beta_{int} + \beta_{pos_o}{pos_o}_i + \beta_{de\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{pos_d}{pos_d}_i + \beta_{de\hspace{-0.1em}f_d}{de\hspace{-0.1em}f_d}_i + \beta_{s_{curr}}s_{curr_i} + \beta_{s_{curr_{abs}}}\mid\hspace{-0.2em}{s_{curr_i}}\hspace{-0.2em}\mid + \beta_tt_i \: +\)</span><br />
-<span class="math inline">\(\beta_{ts}\sqrt{t_i} + \beta_{pos_{qb}}{pos_{qb}}_i + \beta_{de\hspace{-0.1em}f_{qb}}{de\hspace{-0.1em}f_{qb}}_i\)</span> + <span class="math inline">\(\beta_{pos_{qb}s}{pos_{qb}}_is_i + \beta_{de\hspace{-0.1em}f_{qb}s}{de\hspace{-0.1em}f_{qb}}_is_i + \epsilon_{\sigma}\)</span> where<br />
-<span class="math inline">\(\epsilon_{\sigma} \sim \mathcal{N}(0,\sigma_{\epsilon_{\sigma}}^{2})\)</span></p>
+<p><span class="math inline">\(\hat{\sigma}_i = \beta_{int} + \beta_{pos_o}{pos_o}_i + \beta_{de\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{pos_d}{pos_d}_i + \beta_{de\hspace{-0.1em}f_d}{de\hspace{-0.1em}f_d}_i + \beta_{s_{curr}}s_{curr_i} + \beta_{s_{curr_{abs}}}\mid\hspace{-0.2em}{s_{curr_i}}\hspace{-0.2em}\mid + \beta_tt_i \: +\)</span><br />
+<span class="math inline">\(\beta_{ts}\sqrt{t_i} + \beta_{pos_{qb}}{pos_{qb}}_i + \beta_{de\hspace{-0.1em}f_{qb}}{de\hspace{-0.1em}f_{qb}}_i\)</span> + <span class="math inline">\(\beta_{pos_{qb}s}{pos_{qb}}_is_i + \beta_{de\hspace{-0.1em}f_{qb}s}{de\hspace{-0.1em}f_{qb}}_is_i\)</span></p>
 <p>Where we define:<br />
 <span class="math inline">\(int =\)</span> Intercept,<br />
 <span class="math inline">\(\rho =\)</span> = Scaled point spread<br />
@@ -137,8 +135,8 @@ On kickoffs a win probability is modeled using a variation of the trick PFR uses
 <span class="math inline">\(de\hspace{-0.1em}f_{qb} =\)</span> Projected PFF grade for the quarterback of the team on defense</p>
 <p>By making the observation that the final score differential is simply <span class="math inline">\(s_{curr} + \Delta score\)</span> we find:</p>
 <center>
-<p><span class="math inline">\(s_{final_i} \sim \mathcal{N}(\mu_i + s_{curr_i},\,\sigma_i^{2})\)</span> and therefore:
-<span class="math inline">\(WinProb_i = P(s_{final_i} &gt; 0) = CDF^{-1}(\frac{\mu_i + s_{curr_i}}{\sigma_i})\)</span></p>
+<p><span class="math inline">\(s_{final_i} \sim \mathcal{N}(\hat{\mu}_i + s_{curr_i},\,\hat{\sigma}_i^{2})\)</span> and therefore:
+<span class="math inline">\(WinProb_i = P(s_{final_i} &gt; 0) = CDF^{-1}(\frac{\hat{\mu}_i + s_{curr_i}}{\hat{\sigma}^{2}_i})\)</span></p>
 </center>
 <p>Where we define:<br />
 <span class="math inline">\(s_{final} =\)</span> Final score differential</p>
@@ -198,11 +196,11 @@ The assumption that <span class="math inline">\(\Delta score\)</span> is normall
 <p><strong>Overtime model</strong><br />
 A GBM fit with the same variables as above but trained only on overtime data is used to determine win probability in overtime situations.</p>
 <p><strong>Extra Points</strong><br />
-For extra points the process only involves the additional step of sampling <span class="math inline">\(n\)</span> outcomes for the extra point or two point conversion try<a href="#fn12" class="footnote-ref" id="fnref12"><sup>12</sup></a> and passing each resulting game state <span class="math inline">\(i*\)</span> to the model that predicts win probability to find:</p>
-<p><span class="math inline">\(WinProb_i = \frac{1}{n} \sum_{k=1}^nWinProb_{i*}\)</span>, where <span class="math inline">\(WinProb_i*\)</span> =</p>
-<p><span class="math inline">\(CDF^{-1}(\frac{\mu_{i*} + s_{curr_{i*}}}{\sigma^{2}_{i*}})\)</span> if <span class="math inline">\(t_{i*} &gt; 600\)</span>,<br />
-<span class="math inline">\(GBM_{4th}(i*)\)</span> if <span class="math inline">\(0 &lt;t_{i*} \leq 600\)</span>, and<br />
-<span class="math inline">\(GBM_{ot}(i*)\)</span> if <span class="math inline">\(t_{i*} &lt; 0\)</span></p>
+For extra points the process only involves the additional step of sampling <span class="math inline">\(n\)</span> outcomes for the extra point or two point conversion try<a href="#fn12" class="footnote-ref" id="fnref12"><sup>12</sup></a> and passing each resulting game state <span class="math inline">\(i^*\)</span> to the model that predicts win probability to find:</p>
+<p><span class="math inline">\(WinProb_i = \frac{1}{n} \sum_{k=1}^nWinProb_{i^*}\)</span>, where <span class="math inline">\(WinProb_i^*\)</span> =</p>
+<p><span class="math inline">\(CDF^{-1}(\frac{\hat{\mu}_{i^*} + s_{curr_{i^*}}}{\hat{\sigma}^{2}_{i^*}})\)</span> if <span class="math inline">\(t_{i^*} &gt; 600\)</span>,<br />
+<span class="math inline">\(GBM_{4th}(i^*)\)</span> if <span class="math inline">\(0 &lt;t_{i^*} \leq 600\)</span>, and<br />
+<span class="math inline">\(GBM_{ot}(i^*)\)</span> if <span class="math inline">\(t_{i^*} &lt; 0\)</span></p>
 </div>
 <div id="modeling-win-probability-on-first-and-ten" class="section level2">
 <h2><span class="header-section-number">2.2</span> Modeling Win Probability on First and Ten</h2>
@@ -221,88 +219,87 @@ For extra points the process only involves the additional step of sampling <span
 <span class="math inline">\(c_{score} =\)</span> Comeback score<a href="#fn14" class="footnote-ref" id="fnref14"><sup>14</sup></a><br />
 <span class="math inline">\(yrd =\)</span> Number of yards needed for an offensive touchdown<br />
 <span class="math inline">\(t_{adjH} =\)</span> Timeout adjusted time<a href="#fn15" class="footnote-ref" id="fnref15"><sup>15</sup></a> remaining in the half</p>
-<p>We don’t need to do any of the work converting the pairwise log odds into a distribution as the “nnet” package does this. We will let <span class="math inline">\(\delta_i\)</span> denote the multinomial distribution of scoring events that we will be sampling from move right and draw <span class="math inline">\(n\)</span> samples <span class="math inline">\(nextScore_{i*_1}, \: nextScore_{i*_2},\: ..., \: nextScore_{i*_n} \sim \mathcal{Multinomial}(\delta_i)\)</span>. For samples where the next scoring play is a touchdown, the game state is updated to include a draw for the point after that uses the same method outlined in the “Extra Points” sub-heading of 2.1.</p>
-<p>Sampling the time elapsed until the next scoring event is a bit trickier<a href="#fn16" class="footnote-ref" id="fnref16"><sup>16</sup></a>. First, a linear model<a href="#fn17" class="footnote-ref" id="fnref17"><sup>17</sup></a> predicts the number of plays, <span class="math inline">\(plays_{i*}\)</span> for each sample <span class="math inline">\(i*\)</span> that take place from the initial game state <span class="math inline">\(i\)</span> until kickoff for each first and ten game state:</p>
-<p><span class="math inline">\(\hat{plays_{i*}} = \beta_{int} + \beta_{pos_o}{pos_o}_i + \beta_{de\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{pos_d}{pos_d}_i + \beta_{de\hspace{-0.1em}f_d}{de\hspace{-0.1em}f_d}_i + \beta_{yrd}\sqrt{yrd_i} + \beta_{c_{score}}c_{score_i} + \:\)</span>
-<span class="math inline">\(\beta_{t_{adjH}}\sqrt{t_{adjH_i}} + \beta_{nextScore}nextScore_{i*} + \beta_{c_{score}yrd}c_{score_i}\sqrt{yrd_i}\)</span></p>
+<p>We don’t need to do any of the work converting the pairwise log odds into a distribution as the “nnet” package does this. We will let <span class="math inline">\(\delta_i\)</span> denote the multinomial distribution of scoring events that we will be sampling from move right and draw <span class="math inline">\(n\)</span> samples <span class="math inline">\(nextScore_{i^*_1}, \: nextScore_{i^*_2},\: ..., \: nextScore_{i^*_n} \sim \mathcal{Multinomial}(\delta_i)\)</span>. For samples where the next scoring play is a touchdown, the game state is updated to include a draw for the point after that uses the same method outlined in the “Extra Points” sub-heading of 2.1.</p>
+<p>Sampling the time elapsed until the next scoring event is a bit trickier<a href="#fn16" class="footnote-ref" id="fnref16"><sup>16</sup></a>. First, a linear model<a href="#fn17" class="footnote-ref" id="fnref17"><sup>17</sup></a> predicts the number of plays, <span class="math inline">\(plays_{i^*}\)</span> for each sample <span class="math inline">\(i^*\)</span> that take place from the initial game state <span class="math inline">\(i\)</span> until kickoff for each first and ten game state:</p>
+<p><span class="math inline">\(\hat{plays}_{i^*} = \beta_{int} + \beta_{pos_o}{pos_o}_i + \beta_{de\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{pos_d}{pos_d}_i + \beta_{de\hspace{-0.1em}f_d}{de\hspace{-0.1em}f_d}_i + \beta_{yrd}\sqrt{yrd_i} + \beta_{c_{score}}c_{score_i} + \:\)</span>
+<span class="math inline">\(\beta_{t_{adjH}}\sqrt{t_{adjH_i}} + \beta_{nextScore}nextScore_{i^*} + \beta_{c_{score}yrd}c_{score_i}\sqrt{yrd_i}\)</span></p>
 <p>The distributions of the number of plays until the next scoring plays seems to more closely follow a Log-Normal distribution than a Normal distribution:</p>
 <p><img src="thesis_files/figure-html/test-log-norm-1.png" width="672" style="display: block; margin: auto;" /></p>
 <p>To allow for more accurate sampling of the number of plays from the current game state to the next scoring play the “fitdistrplus” package by Marie-Laure Delignette-Muller is used to choose the parameters of a Log-Normal distribution that fit the data best. <span class="math inline">\(\sigma^{2}_{plays}\)</span> is set to the variance parameter of the chosen Log-Normal and we sample:</p>
 <center>
-<p><span class="math inline">\(log(plays_{i*}) \sim \mathcal{N}(log(\hat{plays_{i*}}),\sigma_{plays}^{2})\)</span> so<br />
-<span class="math inline">\(plays_{i*} = e^{log(plays_{i*})}\)</span></p>
+<p><span class="math inline">\(log(plays_{i^*}) \sim \mathcal{N}(log(\hat{plays}_{i^*}),\sigma_{plays}^{2})\)</span> so<br />
+<span class="math inline">\(plays_{i^*} = e^{log(plays_{i^*})}\)</span></p>
 </center>
 <p>To transform each sampled number of plays to time space we split the plays into plays that stopped the clock and plays where the clock continued to run.</p>
 <center>
-<p><span class="math inline">\(nStopped_{i*} \sim \mathcal{Binom}(plays_{i*}, p_{stopped_{i*}})\)</span> and<br />
-<span class="math inline">\(nRunning_{i*} = plays_{i*} - nStopped_{i*}\)</span></p>
+<p><span class="math inline">\(nStopped_{i^*} \sim \mathcal{Binom}(plays_{i^*}, p_{stopped_{i^*}})\)</span> and<br />
+<span class="math inline">\(nRunning_{i^*} = plays_{i^*} - nStopped_{i^*}\)</span></p>
 </center>
-<p>Where <span class="math inline">\(p_{stopped_{i*}}\)</span> is derived from a GBM detailed in the appendix. Draws that result in fewer than one clock stop are rejected because every scoring play stops the clock.</p>
+<p>Where <span class="math inline">\(p_{stopped_{i^*}}\)</span> is derived from a GBM detailed in the appendix. Draws that result in fewer than one clock stop are rejected because every scoring play stops the clock.</p>
 <p>We next find the total time elapsed. We start by letting<br />
-<span class="math inline">\(K = nStopped_{i*}\)</span>,<br />
-<span class="math inline">\(J = nRunning_{i*}\)</span>,<br />
+<span class="math inline">\(K = nStopped_{i^*}\)</span>,<br />
+<span class="math inline">\(J = nRunning_{i^*}\)</span>,<br />
 <span class="math inline">\(S =\)</span> time elapsed for a play after which the clock stops<br />
-<span class="math inline">\(R =\)</span> time elapsed for a play after which the clock runs:</p>
-<p><span class="math inline">\(S_{i*_{1}}, \: S_{i*_{2}}, \: ... , \: S_{i*_{K}} \sim \mathcal{N}(\hat{S_i},\sigma_{S}^{2})\)</span> where
+<span class="math inline">\(R =\)</span> time elapsed for a play after which the clock runs</p>
+<p><span class="math inline">\(S_{i^*_{1}}, \: S_{i^*_{2}}, \: ... , \: S_{i^*_{K}} \sim \mathcal{N}(\hat{S_i},\sigma_{S}^{2})\)</span> where
 <span class="math inline">\(\hat{S_i} = \beta_{int} + \beta_{down}down_i + \beta_{c_{score}}c_{score_i} + \beta_{ydstogo}ydstogo_i + \beta_{c_{score}down}c_{score_i}down_i\)</span></p>
 <p>and</p>
-<p><span class="math inline">\(R_{i*_{1}}, \: R_{i*_{2}}, \: ... , \: R_{i*_{J}} \sim \mathcal{N}(\hat{R_i},\sigma_{R}^{2})\)</span> where
+<p><span class="math inline">\(R_{i^*_{1}}, \: R_{i^*_{2}}, \: ... , \: R_{i^*_{J}} \sim \mathcal{N}(\hat{R_i},\sigma_{R}^{2})\)</span> where
 <span class="math inline">\(\hat{R_i} = \beta_{int} + \beta_{down}down_i + \beta_{c_{score}}c_{score_i} + \beta_{ydstogo}ydstogo_i + \beta_{c_{score}down}c_{score_i}down_i\)</span></p>
 <p>We then find the time elapsed until the next scoring play as:<br />
-<span class="math inline">\(elapsed_{i*} = \sum_{k=1}^{K}S_k + \sum_{j=1}^{J}R_j\)</span></p>
-<p>Samples from <span class="math inline">\({N}(\mu_{t_{stop_i}},\sigma_{t_{stop}}^{2})\)</span> are rejected if they fall outside <span class="math inline">\([0, 15]\)</span> and samples from <span class="math inline">\({N}(\mu_{t_{run_i}},\sigma_{t_{run}}^{2})\)</span> are rejected if they fall outside <span class="math inline">\([15, 50]\)</span> in order to restrict sampled play lengths to a realistic distribution. Additionally, the entire process for sampling a particular value for time elapsed until the next scoring event is repeated if the sample causes an invalid game state<a href="#fn18" class="footnote-ref" id="fnref18"><sup>18</sup></a> (i.e. the time elapsed is greater than the amount of time remaining in the half).</p>
-<p>Finally, the game states <span class="math inline">\(i*_1, \:i*_2, \:..., \: i*_n \sim I^*\)</span> are updated in accord with the values that have been sampled and we have:</p>
-<p><span class="math inline">\(WinProb_i = \frac{1}{n} \sum_{i*}^{I^*}(WinProb_{i*})\)</span>, where <span class="math inline">\(WinProb_{i*}\)</span> ==</p>
-<p><span class="math inline">\(CDF^{-1}(\frac{\hat{\mu}_{i*} + s_{curr_{i*}}}{\sigma^{2}_{i*}})\)</span> for <span class="math inline">\(t_{i*} &gt; 600\)</span>,<br />
-<span class="math inline">\(GBM_{4th}(i*)\)</span> for <span class="math inline">\(t_{i*}\)</span> such that <span class="math inline">\(0 &lt; t_{i*} \leq 600\)</span>,<br />
-<span class="math inline">\(GBM_{ot}(i*)\)</span> for <span class="math inline">\(t_{i*} &lt; 0\)</span></p>
+<span class="math inline">\(elapsed_{i^*} = \sum_{k=1}^{K}S_k + \sum_{j=1}^{J}R_j\)</span></p>
+<p>Samples from <span class="math inline">\(\mathcal{N}(\hat{S_i},\sigma_{S}^{2})\)</span> are rejected if they fall outside <span class="math inline">\([0, 15]\)</span> and samples from <span class="math inline">\({N}(\hat{R_i},\sigma_{R}^{2})\)</span> are rejected if they fall outside <span class="math inline">\([15, 50]\)</span> in order to restrict sampled play lengths to a realistic distribution. Additionally, the entire process for sampling a particular value for time elapsed until the next scoring event is repeated if the sample causes an invalid game state<a href="#fn18" class="footnote-ref" id="fnref18"><sup>18</sup></a> (i.e. the time elapsed is greater than the amount of time remaining in the half).</p>
+<p>Finally, the game states <span class="math inline">\(i^*_1, \:i^*_2, \:..., \: i^*_n \sim I^*\)</span> are updated in accord with the values that have been sampled and we have:</p>
+<p><span class="math inline">\(WinProb_i = \frac{1}{n} \sum_{i^*}^{I^*}(WinProb_{i^*})\)</span>, where <span class="math inline">\(WinProb_{i^*}\)</span> =</p>
+<p><span class="math inline">\(CDF^{-1}(\frac{\hat{\mu}_{i^*} + s_{curr_{i^*}}}{\sigma^{2}_{i^*}})\)</span> for <span class="math inline">\(t_{i^*} &gt; 600\)</span>,<br />
+<span class="math inline">\(GBM_{4th}(i^*)\)</span> for <span class="math inline">\(t_{i^*}\)</span> such that <span class="math inline">\(0 &lt; t_{i^*} \leq 600\)</span>,<br />
+<span class="math inline">\(GBM_{ot}(i^*)\)</span> for <span class="math inline">\(t_{i^*} &lt; 0\)</span></p>
 </div>
 <div id="modeling-win-probability-in-other-scenarios" class="section level2">
 <h2><span class="header-section-number">2.3</span> Modeling Win Probability in Other Scenarios</h2>
 <p>When the game state does not fit any of the scenarios above<a href="#fn19" class="footnote-ref" id="fnref19"><sup>19</sup></a>, it is first advanced to the next set of downs. To do this we take m samples of the triple (outcome of the current set of downs, time elapsed until the next set of downs, current set of downs results in scoring play). We also sample the number of yards downfield the ball will move over the current set of downs for all draws where the current set of downs does not result in a scoring play.</p>
 <p>Seven possible outcomes are also defined for a given set of downs: conversion, turnover on downs, end half, field goal attempt, punt, safety, and turnover. As was the case when modeling the next scoring event, end of half, end of game, and overtime game states are modeled separately from other game states. Additionally, separate models were fit for each down because the log loss was lower for each down when separate models were fitted for each during LMRSO CV. End of half, end of game and overtime game states were all modeled with separate GBMs fit using the “gbm” package while all other game states were modeled with a multinomial logistic regression fit with the “nnet” package. The model formulas are listed in the appendix. The models all utilize down, yards to go, DVOA ratings, quarterback grades and a version of yard line that treats each 10 yard increment of the field as a separate group to help the model make better decisions about the likelihood of field goal attempts, punts, and fourth down conversion attempts.</p>
-<p><img src="thesis_files/figure-html/fg-by-yardline-1.png" width="672" style="display: block; margin: auto;" />
-After we have sampled <span class="math inline">\(n\)</span> outcomes, <span class="math inline">\(outcome_{g_1}:outcome_{g_n}\)</span>, we move on to sampling from the distribution of time elapsed. We begin by sampling the number of plays until the next set of downs. For a given inital game state <span class="math inline">\(i\)</span> this is treated as:</p>
-<p><span class="math inline">\(Plays_{downs_{g_k}} = downstogo_{g_k} + replaysByPenalty_{g_k}\)</span> where
-<span class="math inline">\(downstogo_{g_k} = 5 - down_{curr_i}\)</span> for punts, turnovers on downs, and field goal attempts and<br />
-<span class="math inline">\(downstogo_{g_k} \sim \mathcal{Multinomial}(outcomeDist)\)</span> for conversions, safeties, and turnovers where<br />
+<p><img src="thesis_files/figure-html/fg-by-yardline-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>After we have created a distribution <span class="math inline">\(\delta_i\)</span> of potential outcomes of the set of downs associated with our inital game state <span class="math inline">\(i\)</span> and sampled <span class="math inline">\(n\)</span> outcomes <span class="math inline">\(outcome_{i^*_1}, \: outcome_{i^*_2}, \:..., \:outcome_{i^*_n} \sim \mathcal{Multinomial}(\delta_i)\)</span>, we move on to sampling from the distribution of time elapsed. We begin by sampling the number of plays until the next set of downs. This is treated as:</p>
+<p><span class="math inline">\(Plays_{i^*} = downstogo_{i^*} + replaysByPenalty_{i^*}\)</span> where
+<span class="math inline">\(downstogo_{i^*} = 5 - down_i\)</span> for punts, turnovers on downs, and field goal attempts and<br />
+<span class="math inline">\(downstogo_{i^*} \sim \mathcal{Multinomial}(outcomeDist)\)</span> for conversions, safeties, and turnovers where<br />
 <span class="math inline">\(outcomeDist =\)</span><br />
 <span class="math inline">\((0.349, 0.348, 0.276, 0.027)\)</span> for conversions,<br />
 <span class="math inline">\((0.363, 0.312, 0.293, 0.032)\)</span> for turnovers, and<br />
 <span class="math inline">\((0.333, 0.228, 0.272, 0.167)\)</span> for safeties. Additionally,<br />
-<span class="math inline">\(replaysByPenalty_{g_k} \sim \mathcal{Binom}(downstogo_{g_k}, p_{penalty_i})\)</span> where<br />
+<span class="math inline">\(replaysByPenalty_{i^*} \sim \mathcal{Binom}(downstogo_{i^*}, p_{penalty_i})\)</span> where<br />
 <span class="math inline">\(p_{penalty_i}\)</span> is taken from a GBM that predicts the probability of a given play being replayed due to penalty. It is listed in the appendix.</p>
-<p><span class="math inline">\(downstogo_{g_k}\)</span> is set to be <span class="math inline">\(5 - down_{curr_i}\)</span> when <span class="math inline">\(outcome_{g_k}\)</span> is a punt, turnover on downs or field goal attempt because those plays are assumed to happen only on fourth down. The multinomial distributions for conversions, turnovers and safeties simply refer to the probability that an outcome of the given type for a set of downs occurs on a given down. Samples from the distributions that imply the event happened on a down that has already occurred are rejected. Penalty replays refers to the number of plays until the next set of downs that will be replayed by penalty. To translate a sampled number of plays into time space we use the same equations and process that was detailed in section 2.2.</p>
+<p><span class="math inline">\(downstogo_{i^*}\)</span> is set to be <span class="math inline">\(5 - down__i\)</span> when <span class="math inline">\(outcome_{i^*}\)</span> is a punt, turnover on downs or field goal attempt because those plays are assumed to happen only on fourth down. The multinomial distributions for conversions, turnovers and safeties simply refer to the probability that an outcome of the given type for a set of downs occurs on a given down. Samples from the distributions that imply the event happened on a down that has already occurred are rejected. Penalty replays refers to the number of plays until the next set of downs that will be replayed by penalty. To translate a sampled number of plays into time space we use the same equations and process that was detailed in section 2.2.</p>
 <p>We next sample whether a given set of downs will result in a scoring play<a href="#fn20" class="footnote-ref" id="fnref20"><sup>20</sup></a>.</p>
-<p><span class="math inline">\(score_{g_k} \sim \mathcal{Multinomial}(p_{fg_i}, p_{defTD_i}, p_{noScore_i})\)</span> if <span class="math inline">\(outcome_{g_k} =\)</span> fg attempt
-<span class="math inline">\(score_{g_k} \sim \mathcal{Binomial}(p_{score_i} | \:outcome_{g_k})\)</span> else</p>
-<p><span class="math inline">\(p_{score_i} | \:outcome_{g_k}\)</span> is predicted by a GBM for sampled outcomes that are able to result in scores—conversions, field goals, punts and turnovers<a href="#fn21" class="footnote-ref" id="fnref21"><sup>21</sup></a>. Each GBM was fit using every set of downs that ended with the given outcome, and is listed in the appendix. For samples where score = 1 and the score is a touchdown, the game state is updated to include a draw for the point after that uses the same method outlined in the extra points sub-heading of 2.1. For these samples, as well as any samples where the <span class="math inline">\(outcome_{g_k}\)</span> is the end of the half, we find that for each updated game_state <span class="math inline">\(g_{k}\)</span> the win probability is calculated in the same manner as it was in 2.2:</p>
-<p><span class="math inline">\(WinProb_{g_k}\)</span> is:<br />
-<span class="math inline">\(CDF^{-1}(\frac{\mu_{g_k} + s_{curr_{g_k}}}{\sigma_{g_k}})\)</span> for <span class="math inline">\(t_{g_k} &gt; 600\)</span>,<br />
-<span class="math inline">\(GBM_{4th}(g_k)\)</span> for <span class="math inline">\(t_{g_k}\)</span> such that <span class="math inline">\(0 &lt; t_{g_k} \leq 600\)</span>,<br />
-<span class="math inline">\(GBM_{ot}(g_k)\)</span> for <span class="math inline">\(t_{g_k} &lt; 0\)</span></p>
+<p><span class="math inline">\(score_{i^*} \sim \mathcal{Multinomial}(p_{fg_i}, p_{defTD_i}, p_{noScore_i})\)</span> if <span class="math inline">\(outcome_{i^*} =\)</span> fg attempt
+<span class="math inline">\(score_{i^*} \sim \mathcal{Binomial}(p_{score_i} \: | \:outcome_{i^*})\)</span> else</p>
+<p><span class="math inline">\(p_{score_i} | \:outcome_{i^*}\)</span> is predicted by a GBM for sampled outcomes that are able to result in scores—conversions, field goals, punts and turnovers<a href="#fn21" class="footnote-ref" id="fnref21"><sup>21</sup></a>. Each GBM was fit using every set of downs that ended with the given outcome, and is listed in the appendix. For samples where score = 1 and the score is a touchdown, the game state is updated to include a draw for the point after that uses the same method outlined in the extra points sub-heading of 2.1. For these samples, as well as any samples where the <span class="math inline">\(outcome_{i^*}\)</span> is the end of the half, we find that for each updated game_state <span class="math inline">\(i^*\)</span> the win probability is calculated in the same manner as it was in 2.2:</p>
+<p><span class="math inline">\(WinProb_{i^*}\)</span> is:<br />
+<span class="math inline">\(CDF^{-1}(\frac{\hat{\mu}_{i^*} + s_{curr_{i^*}}}{\hat{\sigma}^{2}_{i^*}})\)</span> for <span class="math inline">\(t_{i^*} &gt; 600\)</span>,<br />
+<span class="math inline">\(GBM_{4th}(i^*)\)</span> for <span class="math inline">\(t_{i^*}\)</span> such that <span class="math inline">\(0 &lt; t_{i^*} \leq 600\)</span>,<br />
+<span class="math inline">\(GBM_{ot}(i^*)\)</span> for <span class="math inline">\(t_{i^*} &lt; 0\)</span></p>
 <p>For samples where score = 0 we must also sample a value for the number of yards downfield the ball will move over the current set of downs before calculating win probability. For each outcome other than conversions and field goal attempts<a href="#fn22" class="footnote-ref" id="fnref22"><sup>22</sup></a>, two linear models are defined—one for downs first through third and one for fourth down—that specify a distribution for the number of yards downfield the ball will move for a given game state. Each linear model is listed in the appendix. The yards moved downfield is modeled separately for each possible outcome because doing so helped most of the linear models meet the assumption of constant residual variance and normally distributed errors<a href="#fn23" class="footnote-ref" id="fnref23"><sup>23</sup></a>, allowing for easier sampling. The same reasoning is behind separating fourth down data from other data when fitting each model—the residual variance should be lower on fourth down for each outcome type because there is no longer uncertainty about where a punt, field goal attempt, etc. will be taken from. Conversions are a special case and are split into regular conversions and conversions by penalty.</p>
 <center>
-<span class="math inline">\(ConversionType_{g_k} \sim \mathcal Bernoulli(p_{penaltyConv_i})\)</span> if <span class="math inline">\(outcome_{g_k} =\)</span> conversion
+<span class="math inline">\(ConversionType_{i^*} \sim \mathcal Bernoulli(p_{penaltyConv_i})\)</span> if <span class="math inline">\(outcome_{i^*} =\)</span> conversion
 </center>
 <p><span class="math inline">\(p_{penaltyConv_i}\)</span> is defined by a logistic regression that has been trained on all conversion plays. The model only looked at the current down, the yards to go for a first and the interaction between the two variables. Yards moved downfield for conversions by penalty are also modeled with two linear models, one for fourth down and one for any other down. For regular conversions a linear model is specified for each down to better satisfy the linear regression constraints. Field goal attempts also work differently. Field goal attempts that don’t result in a score are classified as either a regular miss or a block.</p>
 <center>
-<span class="math inline">\(fgBlock_{g_k} \sim \mathcal Bernoulli(p_{block})\)</span>
+<span class="math inline">\(fgBlock_{i^*} \sim \mathcal Bernoulli(p_{block})\)</span>
 </center>
-<p><span class="math inline">\(p_{block}\)</span> is modeled using a GBM where the only predictors are yard line<a href="#fn24" class="footnote-ref" id="fnref24"><sup>24</sup></a> and down, where down likely only matters in the sense that it alerts the model as to whether the yard line might change between the current game state and any field goal try. The change in field position on regular field goal misses is modeled by a linear regression when the down is not fourth. On fourth down the ball is simply moved back 7 yards as is customary on missed field goals. Blocked field goals require the same protocol for determing change in field position as other possible outcomes. One linear model is used for downs first through third and another for fourth. For a given output <span class="math inline">\(yardsMoved_{g_k}\)</span> from the model <span class="math inline">\(m\)</span> specified by <span class="math inline">\(outcome_{g_k}\)</span> we take a sample:</p>
+<p><span class="math inline">\(p_{block}\)</span> is modeled using a GBM where the only predictors are yard line<a href="#fn24" class="footnote-ref" id="fnref24"><sup>24</sup></a> and down, where down likely only matters in the sense that it alerts the model as to whether the yard line might change between the current game state and any field goal try. The change in field position on regular field goal misses is modeled by a linear regression when the down is not fourth. On fourth down the ball is simply moved back 7 yards as is customary on missed field goals. Blocked field goals require the same protocol for determing change in field position as other possible outcomes. One linear model is used for downs first through third and another for fourth. For a given output <span class="math inline">\(\Delta\hat{fieldPosition}_i^*\)</span> from the model <span class="math inline">\(m\)</span> that is specified by <span class="math inline">\(outcome_{i^*}\)</span> we take a sample:</p>
 <center>
-<span class="math inline">\(yardsDraw_{g_k} \sim \mathcal N(yardsMoved_{g_k}, \sigma^{2}_{\epsilon_m})\)</span>
+<span class="math inline">\(\Delta fieldPosition_i^* \sim \mathcal N(\Delta\hat{fieldPosition}_i^*, \sigma^{2}_{\epsilon_m})\)</span>
 </center>
 <p>Samples drawn are rejected if they result in an invalid or illogical game state. Examples include first down conversions not by penalty where the draw would cause the game state to be short of the first down marker, a turnover on downs where the draw causes the ball to move past the first down marker, or any draw where the resulting game state features a yard line outside <span class="math inline">\([1, 99]\)</span>.</p>
-<p>Once we have samples for the number of yards the ball has moved downfield we can fully update each of the game states for which a scoring outcome was not sampled. Each of these remaining game states <span class="math inline">\(g_k\)</span> will then go through the process outlined in 2.2. This will lead to the creation of <span class="math inline">\(N\)</span> new game states advanced from each game state <span class="math inline">\(g_k\)</span> and will result in:</p>
-<p><span class="math inline">\(WinProb_{g_k} = \frac{1}{N}\sum_{j=1}^NWinProb_{g_{k_j}}\)</span> where<br />
-<span class="math inline">\(WinProb_{g_{k_j}}\)</span> is:<br />
-<span class="math inline">\(CDF^{-1}(\frac{\mu_{g_{k_j}} + s_{curr_{g_{k_j}}}}{\sigma_{g_{k_j}}})\)</span> for <span class="math inline">\(t_{g_{k_j}} &gt; 600\)</span>,<br />
-<span class="math inline">\(GBM_{4th}({g_{k_j}})\)</span> for <span class="math inline">\(t_{g_{k_j}}\)</span> such that <span class="math inline">\(0 &lt; t_{g_k} \leq 600\)</span>,<br />
-<span class="math inline">\(GBM_{ot}({g_{k_j}})\)</span> for <span class="math inline">\(t_{g_{k_j}} &lt; 0\)</span></p>
-<p>The resulting <span class="math inline">\(WinProb_i\)</span> for the initial state <span class="math inline">\(i\)</span> is then computed by taking averaging the values for of win probability for each game state <span class="math inline">\({g_k}\)</span><a href="#fn25" class="footnote-ref" id="fnref25"><sup>25</sup></a>:</p>
+<p>Once we have samples for the number of yards the ball has moved downfield we can fully update each of the game states for which a scoring outcome was not sampled. Each of these <span class="math inline">\(m \leq n\)</span> remaining game states <span class="math inline">\(i^*_1, \: i^*_2, \:..., \:i^*_m \sim I^*\)</span> will then go through the process outlined in 2.2. This will lead to the creation of <span class="math inline">\(M\)</span> new game states <span class="math inline">\(j^*_1, \: j^*_2, \:..., \:j^*_M \sim J^* \:| \: i^*\)</span>advanced from each game state <span class="math inline">\(i^*\)</span> and will result in:</p>
+<p><span class="math inline">\(WinProb_{i^*} = \frac{1}{M}\sum_{j^*}^{J^*}WinProb_{j^* \: | \: i^*}\)</span>, where <span class="math inline">\(WinProb_{j^*} \: | \: i^*\)</span> is:<br />
+<span class="math inline">\(CDF^{-1}(\frac{\hat{\mu}_{j*} + s_{curr_{j*}}}{\hat{\sigma}^{2}_{j*}}\:|\:i^*)\)</span> for <span class="math inline">\(t_{j*}\:|\:i^* &gt; 600\)</span>,<br />
+<span class="math inline">\(GBM_{4th}(j^*\:|\:i^*)\)</span> for <span class="math inline">\(t_{j^*}\:|\:i^*\)</span> such that <span class="math inline">\(0 &lt; t_{j^*} \leq 600\)</span>,<br />
+<span class="math inline">\(GBM_{ot}(j^*\:|\:i^*)\)</span> for <span class="math inline">\(t_{j^*}\:|\:i^* &lt; 0\)</span></p>
+<p>The resulting <span class="math inline">\(WinProb_i\)</span> for the initial state <span class="math inline">\(i\)</span> is then computed by taking averaging the values for of win probability for each game state <span class="math inline">\({i^*}\)</span><a href="#fn25" class="footnote-ref" id="fnref25"><sup>25</sup></a>:</p>
 <center>
-<span class="math inline">\(WinProb_i = \frac{1}{n} \sum_{k=1}^nWinProb_{g_k}\)</span>
+<span class="math inline">\(WinProb_i = \frac{1}{n} \sum_{i^*}^{I^*}WinProb_{i^*}\)</span>
 </center>
 </div>
 <div id="reasoning-behind-modeling-methodology" class="section level2">
@@ -331,7 +328,7 @@ After we have sampled <span class="math inline">\(n\)</span> outcomes, <span cla
 <li id="fn22"><p>and end of halves where we don’t need to sample this quantity at all<a href="2-methodology.html#fnref22" class="footnote-back">↩</a></p></li>
 <li id="fn23"><p>The exception to this is when the outcome of the set of downs is a conversion, but rejecting samples that were behind the first down marker alleviated this.<a href="2-methodology.html#fnref23" class="footnote-back">↩</a></p></li>
 <li id="fn24"><p>Given a missed field goal, the shorter the attempt was, the more likely it was to be blocked<a href="2-methodology.html#fnref24" class="footnote-back">↩</a></p></li>
-<li id="fn25"><p>This includes the game states for which <span class="math inline">\(score{g_k}\)</span> was equal to one and <span class="math inline">\(WinProb{g_k}\)</span> was calculated earlier.<a href="2-methodology.html#fnref25" class="footnote-back">↩</a></p></li>
+<li id="fn25"><p>This includes the game states for which <span class="math inline">\(score{i^*}\)</span> was equal to one and <span class="math inline">\(WinProb_{i^*}\)</span> was calculated earlier.<a href="2-methodology.html#fnref25" class="footnote-back">↩</a></p></li>
 <li id="fn26"><p>Though this modeling protocol certainly comes with its fair share of edge cases to account for.<a href="2-methodology.html#fnref26" class="footnote-back">↩</a></p></li>
 </ol>
 </div>
