@@ -1,11 +1,9 @@
 # Methodology
-
-Instead of predicting win probability from any game state with one full-stop model, win probability is predicted only from kickoff game states^[Each of the models will be described in greater detail later on in the section]. When the game state is not a kickoff, a series of models first specifies probability distributions for the more granular events that eventually lead to a kickoff and samples are taken from these probability distributions to create a distribution of the possible future game states at the next kickoff. Win probability is then taken to be the mean of the win probability of the distribution of sampled future game states. To implement this a given play is sorted into one of four possible game states: kickoff, extra point, first and ten, and all other game states.   
-
+Instead of predicting win probability from any game state with one full-stop model, we predict win probability only from kickoff game states^[Each of the models will be described in greater detail later on in the section]. When the game state is not a kickoff, a series of models first specifies probability distributions for the more granular events that eventually lead to a kickoff and samples are taken from these probability distributions to create a distribution of the possible future game states at the next kickoff. Win probability is then taken to be the mean of the win probability of the distribution of sampled future game states. To implement this a given play is sorted into one of four possible game states: kickoff, extra point, first and ten, and all other game states.   
 ## Modeling Win Probability on Kickoffs and Point After Attempts
 
 **Model when more than ten minutes remain:**  
-On kickoffs a win probability is modeled using a variation of the trick PFR uses to implement a normal distribution when deriving win probability for a given game state $i$:  
+On kickoffs a win probability is modeled using a variation of the trick PFR uses to implement a normal distribution when deriving win probability. For a given game state $i$ we have:  
 
 $\Delta score_i \sim \mathcal{N}(\hat{\mu}_i,\hat{\sigma}^{2}_i)$ where  
 
@@ -21,7 +19,7 @@ Where we define:
 $int =$ Intercept,  
 $\rho =$ = Scaled point spread  
 $s_{curr} =$ Current score differential  
-$s_{curr_{abs}} =$ Absolute current score differential   
+$s_{curr_{abs}} =$ Absolute value of the current score differential   
 $k =$ Team that receives the second half kickoff^[1 if the team that has the ball will receive the second half kickoff, -1 if the defensive team will receive the second half kickoff, and 0 if the game is already past halftime]  
 $t =$ Time remaining in seconds  
 $pos_o =$ Offensive DVOA for the team possessing the football   
@@ -45,12 +43,12 @@ $s_{final} =$ Final score differential
 
 The predictors for $\mu$ were chosen by performing cross validation in which the most recent season in the training set, 2016, was left out and used as a test set^[The most recent season was chosen as the season to leave out because the model will always be tasked with using past results to predict future results in practice, and it seems likely that rule changes and evolving strategy could cause gradual changes in game play over time. If these changes are even somewhat smooth, it will be useful to tune models on data that will differ from the training set in a similar manner to the way the next season’s batch of data will differ from the current season’s.]. Horowitz, Ventura, and Yurko (2018) used a similar method and called it “leave-one-season-out-cross-validation (LOSO CV)”, a term I will modify to leave-most-recent-season-out-cross-validation and brand LMRSO CV. Brier score and log-loss were the primary estimates used to evaluate model performance. The simple linear model used was also tested against a mixed linear model that treated $k$—receiving the second half kickoff—as a random effect and utilized an additional intercept as well as random slopes for $pos_o$ and $de\hspace{-0.1em}f_o$, but it performed no better than the simple linear model.
 
-Predictors for sigma were also chosen using LMRSO CV. The linear model used for sigma was also tested against GAMs that were fit with Gamma and Log-Normal distributions using the “gamlss” package developed by Rigby and Stasinopoulos (2005). The “gamlss” package was also used to fit a GAM with an InverseGamma distribution to model $\sigma^{2}$, but the linear model performed the best by mean-squared error when using LMRSO CV^[Error for $\sigma^{2}$ was determined after taking the square root]. This was surprising because the distributions specified when fitting the GAMs seemed more appropriate given the distribution of $\sigma$ and $\sigma^{2}$. Ultimately, however, it made the most sense to use the model with the best estimate of $\sigma$, because only a point estimate of $\sigma$ is taken as a parameter of the normal distribution.
+Predictors for $\sigma$ were also chosen using LMRSO CV. The linear model used for $\sigma$ was also tested against GAMs that were fit with Gamma and Log-Normal distributions using the “gamlss” package developed by Rigby and Stasinopoulos (2005). The “gamlss” package was also used to fit a GAM with an InverseGamma distribution to model $\sigma^{2}$, but the linear model performed the best by mean-squared error when using LMRSO CV^[Error for $\sigma^{2}$ was determined after taking the square root]. This was surprising because the distributions specified when fitting the GAMs seemed more appropriate given the distribution of $\sigma$ and $\sigma^{2}$. Ultimately, however, it made the most sense to use the model with the best estimate of $\sigma$, because only a point estimate of $\sigma$ is taken as a parameter of the normal distribution.
 
 A Generalized Linear Mixed Model (GLMM) fit using the “lme4” package and a Generalized Boosted Model (GBM) fitted using Greg Ridgeway’s “gbm” package, used to extend Jerome Friedman’s Gradient Boosted Machine (2001 & 2002). The above model outperforms both the GLMM and the GBM.
 
 **Model when ten or fewer minutes remain**  
-The assumption that $\Delta score$ is normally distributed begins to break down some time around the ten minute mark of the fourth quarter. Since it is no longer valid to model $\Delta score$ with a normal distribution, win probability is instead modeled using a GBM fit with the following terms using the “gbm” package.
+The assumption that $\Delta score$ is normally distributed begins to break down some time around the ten minute mark of the fourth quarter. Since it is no longer valid to model $\Delta score$ with a normal distribution, win probability is instead modeled using a Gradient Boosted Model (GBM) fit the following terms using the “gbm” package.  
 
 ```{r win-prob-vars, results="asis", echo=FALSE, cache = TRUE}
 win.prob.4th.vars = c("Scaled Point Spread", "Current Score Differential", "Square Root of Adjusted Time Left in the Half", "Offensive DVOA for the Offensive Team", "Offensive DVOA for the Defensive Team", "Defensive DVOA for the Offensive Team", "Defensive DVOA for the Defensive Team", "Projected QB grade for the Offensive Team", "Projected QB grade for the Offensive Team", "Timeouts left for the Offense", "Timeouts left for the Defense")
@@ -62,7 +60,7 @@ kable(win.prob.4th.vars,
       booktabs = TRUE)
 ```
 
-Both a Random Forest and a GBM were considered because of their penchant for fitting data that features predictors with ambiguous interactions, but a GBM was chosen because it performed better in LMRSO CV. Friedman’s Gradient Boosted Machine algorithm (2001 & 2002), implemented in the “gbm” package, works by additively growing a forest of $n$ decision trees where each tree has a maximum depth $d$.Trees are added to the forest using gradient descent—each tree must reduce the residual loss as defined by Friedman's $K$-class loss function (2001):
+Both a Random Forest and the GBM above were considered because of their penchant for fitting data that features predictors with ambiguous interactions, but the GBM was chosen because it performed better in LMRSO CV. Friedman’s Gradient Boosted Machine algorithm (2001 & 2002), implemented in the “gbm” package, works by additively growing a forest of $n$ decision trees where each tree has a maximum depth $d$.Trees are added to the forest using gradient descent—each tree must reduce the residual loss as defined by Friedman's $K$-class loss function (2001):
 
 <center>
 
@@ -70,15 +68,15 @@ $-\sum_{k=1}^Ky_klog(p_k(x))$
 
 </center>
 
-A shrinkage parameter $l$ exists to reduce the learning rate of trees. Lower values generally protect against overfitting but often require more trees to maximize predictive power.
+A shrinkage parameter $l$ exists to reduce the learning rate of trees. Lower values generally protect against overfitting but often require more trees to maximize predictive power. The GBM fit above uses parameters $n = 5000$, $d = 2$, and $l = 0.02$.
 
 **Overtime model**  
-A GBM fit with the same variables as above but trained only on overtime data is used to determine win probability in overtime situations. 
+A GBM fit with the same variables as above but trained only on overtime data is used to determine win probability in overtime situations. This GBM has parameters $n = 1000$, $d = 2$, and $l = 0.02$.
 
 **Extra Points**  
-For extra points the process only involves the additional step of sampling $n$ outcomes for the extra point or two point conversion try^[A chart defining situations where a team is classified as going for two is listed in the appendix] and passing each resulting game state $i^*$ to the model that predicts win probability to find:
+For extra points the process only involves the additional step of sampling $n$ outcomes for the extra point or two point conversion try^[A chart defining situations where a team is classified as going for two is listed in the appendix] and passing each resulting game state $i^*_1, \: i^*_2, \:..., \: i^*_n \sim I^*$ to the model that predicts win probability to find:
 
-$WinProb_i = \frac{1}{n} \sum_{k=1}^nWinProb_{i^*}$, where $WinProb_i^*$ =    
+$WinProb_i = \frac{1}{n} \sum_{i^*}^{I^*}WinProb_{i^*}$, where $WinProb_i^*$ =    
 
   $CDF^{-1}(\frac{\hat{\mu}_{i^*} + s_{curr_{i^*}}}{\hat{\sigma}^{2}_{i^*}})$ if $t_{i^*} > 600$,  
   $GBM_{4th}(i^*)$ if $0 <t_{i^*} \leq 600$, and   

@@ -68,10 +68,9 @@
 <li class="chapter" data-level="" data-path="literature-review.html"><a href="literature-review.html"><i class="fa fa-check"></i>Literature Review</a></li>
 <li class="chapter" data-level="1" data-path="1-data.html"><a href="1-data.html"><i class="fa fa-check"></i><b>1</b> Data</a></li>
 <li class="chapter" data-level="2" data-path="2-methodology.html"><a href="2-methodology.html"><i class="fa fa-check"></i><b>2</b> Methodology</a><ul>
-<li class="chapter" data-level="2.1" data-path="2-methodology.html"><a href="2-methodology.html#modeling-win-probability-on-kickoffs-and-point-after-attempts"><i class="fa fa-check"></i><b>2.1</b> Modeling Win Probability on Kickoffs and Point After Attempts</a></li>
-<li class="chapter" data-level="2.2" data-path="2-methodology.html"><a href="2-methodology.html#modeling-win-probability-on-first-and-ten"><i class="fa fa-check"></i><b>2.2</b> Modeling Win Probability on First and Ten</a></li>
-<li class="chapter" data-level="2.3" data-path="2-methodology.html"><a href="2-methodology.html#modeling-win-probability-in-other-scenarios"><i class="fa fa-check"></i><b>2.3</b> Modeling Win Probability in Other Scenarios</a></li>
-<li class="chapter" data-level="2.4" data-path="2-methodology.html"><a href="2-methodology.html#reasoning-behind-modeling-methodology"><i class="fa fa-check"></i><b>2.4</b> Reasoning Behind Modeling Methodology</a></li>
+<li class="chapter" data-level="2.1" data-path="2-methodology.html"><a href="2-methodology.html#modeling-win-probability-on-first-and-ten"><i class="fa fa-check"></i><b>2.1</b> Modeling Win Probability on First and Ten</a></li>
+<li class="chapter" data-level="2.2" data-path="2-methodology.html"><a href="2-methodology.html#modeling-win-probability-in-other-scenarios"><i class="fa fa-check"></i><b>2.2</b> Modeling Win Probability in Other Scenarios</a></li>
+<li class="chapter" data-level="2.3" data-path="2-methodology.html"><a href="2-methodology.html#reasoning-behind-modeling-methodology"><i class="fa fa-check"></i><b>2.3</b> Reasoning Behind Modeling Methodology</a></li>
 </ul></li>
 <li class="chapter" data-level="3" data-path="3-results.html"><a href="3-results.html"><i class="fa fa-check"></i><b>3</b> Results</a></li>
 <li class="chapter" data-level="4" data-path="4-applications.html"><a href="4-applications.html"><i class="fa fa-check"></i><b>4</b> Applications</a></li>
@@ -114,7 +113,7 @@
 <h2><span class="header-section-number">A.1</span> QB Model</h2>
 <p>A linear model was deemed sufficient for predicting a the PFF grade for a quarterback in a given seasons using past data. For a given quarterback and season combination <span class="math inline">\(i\)</span>, we have:</p>
 <p><span class="math inline">\(grade_{i} = \beta_{int} + \beta_{1}smoothGrades_i + \beta_{2}draftPick_i + \beta_{3}prevAttempts_i + \epsilon_i\)</span></p>
-<p>where <span class="math inline">\(smoothgrades_i\)</span> refers to a the weighted average of the grades a quarterback has received in previous seasons with more recent seasons weighted more heavily using a smooth exponential decay function with <span class="math inline">\(decay = 0.3\)</span>. A prior number of attempts of league average quarterback play was added to each grade outputted by the decay function. <span class="math inline">\(prior = 1500\)</span> was chosen to minimize error through LMRSO CV.</p>
+<p>where <span class="math inline">\(smoothGrades_i\)</span> refers to a the weighted average of the grades a quarterback has received in previous seasons with more recent seasons weighted more heavily using a smooth exponential decay function with <span class="math inline">\(decay = 0.3\)</span>. A prior number of attempts of league average quarterback play was added to each grade outputted by the decay function. <span class="math inline">\(prior = 1500\)</span> was chosen to minimize error through LMRSO CV.</p>
 </div>
 <div id="two-point-chart" class="section level2">
 <h2><span class="header-section-number">A.2</span> Two Point Chart</h2>

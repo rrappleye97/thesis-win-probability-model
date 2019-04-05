@@ -9,7 +9,7 @@ A linear model was deemed sufficient for predicting a the PFF grade for a quarte
 
 $grade_{i} = \beta_{int} + \beta_{1}smoothGrades_i + \beta_{2}draftPick_i + \beta_{3}prevAttempts_i + \epsilon_i$  
 
-where $smoothgrades_i$ refers to a the weighted average of the grades a quarterback has received in previous seasons with more recent seasons weighted more heavily using a smooth exponential decay function with $decay = 0.3$. A prior number of attempts of league average quarterback play was added to each grade outputted by the decay function. $prior = 1500$ was chosen to minimize error through LMRSO CV.  
+where $smoothGrades_i$ refers to a the weighted average of the grades a quarterback has received in previous seasons with more recent seasons weighted more heavily using a smooth exponential decay function with $decay = 0.3$. A prior number of attempts of league average quarterback play was added to each grade outputted by the decay function. $prior = 1500$ was chosen to minimize error through LMRSO CV.  
 
 ## Two Point Chart
 The (very) naive two point decision making models assumes that teams go for two when the score differential is one of the following during the period between the touchdown and point after attempt:

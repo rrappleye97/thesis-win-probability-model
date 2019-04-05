@@ -68,10 +68,9 @@
 <li class="chapter" data-level="" data-path="literature-review.html"><a href="literature-review.html"><i class="fa fa-check"></i>Literature Review</a></li>
 <li class="chapter" data-level="1" data-path="1-data.html"><a href="1-data.html"><i class="fa fa-check"></i><b>1</b> Data</a></li>
 <li class="chapter" data-level="2" data-path="2-methodology.html"><a href="2-methodology.html"><i class="fa fa-check"></i><b>2</b> Methodology</a><ul>
-<li class="chapter" data-level="2.1" data-path="2-methodology.html"><a href="2-methodology.html#modeling-win-probability-on-kickoffs-and-point-after-attempts"><i class="fa fa-check"></i><b>2.1</b> Modeling Win Probability on Kickoffs and Point After Attempts</a></li>
-<li class="chapter" data-level="2.2" data-path="2-methodology.html"><a href="2-methodology.html#modeling-win-probability-on-first-and-ten"><i class="fa fa-check"></i><b>2.2</b> Modeling Win Probability on First and Ten</a></li>
-<li class="chapter" data-level="2.3" data-path="2-methodology.html"><a href="2-methodology.html#modeling-win-probability-in-other-scenarios"><i class="fa fa-check"></i><b>2.3</b> Modeling Win Probability in Other Scenarios</a></li>
-<li class="chapter" data-level="2.4" data-path="2-methodology.html"><a href="2-methodology.html#reasoning-behind-modeling-methodology"><i class="fa fa-check"></i><b>2.4</b> Reasoning Behind Modeling Methodology</a></li>
+<li class="chapter" data-level="2.1" data-path="2-methodology.html"><a href="2-methodology.html#modeling-win-probability-on-first-and-ten"><i class="fa fa-check"></i><b>2.1</b> Modeling Win Probability on First and Ten</a></li>
+<li class="chapter" data-level="2.2" data-path="2-methodology.html"><a href="2-methodology.html#modeling-win-probability-in-other-scenarios"><i class="fa fa-check"></i><b>2.2</b> Modeling Win Probability in Other Scenarios</a></li>
+<li class="chapter" data-level="2.3" data-path="2-methodology.html"><a href="2-methodology.html#reasoning-behind-modeling-methodology"><i class="fa fa-check"></i><b>2.3</b> Reasoning Behind Modeling Methodology</a></li>
 </ul></li>
 <li class="chapter" data-level="3" data-path="3-results.html"><a href="3-results.html"><i class="fa fa-check"></i><b>3</b> Results</a></li>
 <li class="chapter" data-level="4" data-path="4-applications.html"><a href="4-applications.html"><i class="fa fa-check"></i><b>4</b> Applications</a></li>
@@ -110,7 +109,7 @@
             <section class="normal" id="section-">
 <div id="results" class="section level1">
 <h1><span class="header-section-number">Chapter 3</span> Results</h1>
-<p>Model performance is tested by re-training each sub-model on the entire training set<a href="#fn27" class="footnote-ref" id="fnref27"><sup>27</sup></a> and evaluating the performance of the models when the protocol described in chapter 3 is used. Results are then are then compared against the other two models for which we have data—the models developed by Lock and Nettleton (2014) and Horowitz, Ventura, and Yurko (2018). The two loss functions used to measure model performance are Brier score, the mean of the squared distance between each prediction and the corresponding outcome, and log loss, the mean of the ln(1 - distance) for each prediction and the corresponding outcome.</p>
+<p>Model performance is tested by re-training each sub-model on the entire training set<a href="#fn29" class="footnote-ref" id="fnref29"><sup>29</sup></a> and evaluating the performance of the models when the protocol described in chapter 3 is used. Results are then are then compared against the other two models for which we have data—the models developed by Lock and Nettleton (2014) and Horowitz, Ventura, and Yurko (2018). The two loss functions used to measure model performance are Brier score, the mean of the squared distance between each prediction and the corresponding outcome, and log loss, the mean of the ln(1 - distance) for each prediction and the corresponding outcome.</p>
 <table>
 <caption><span id="tab:resultsoverall">Table 3.1: </span>Brier score by model</caption>
 <thead>
@@ -149,7 +148,7 @@
 </tr>
 </tbody>
 </table>
-<p>We can also see that, as expected, the model generally performs better as the game progresses with the exception of overtime<a href="#fn28" class="footnote-ref" id="fnref28"><sup>28</sup></a>. Each model tested has a Brier score above 0.25 for the overtime period, indicating that, at least for the 2017 season, each model would be better off classifying every overtime game as a coin flip.</p>
+<p>We can also see that, as expected, the model generally performs better as the game progresses with the exception of overtime<a href="#fn30" class="footnote-ref" id="fnref30"><sup>30</sup></a>. Each model tested has a Brier score above 0.25 for the overtime period, indicating that, at least for the 2017 season, each model would be better off classifying every overtime game as a coin flip.</p>
 <table>
 <caption><span id="tab:resultsquarter">Table 3.2: </span>Brier Score by Quarter</caption>
 <thead>
@@ -247,9 +246,9 @@ In the game above, the Saints fell into an early hole before clawing back to for
 </div>
 <div class="footnotes">
 <hr />
-<ol start="27">
-<li id="fn27"><p>The training set is comprised of all the 2010-2016 data. During the tuning process each model was trained only on 2010-2015 data.<a href="3-results.html#fnref27" class="footnote-back">↩</a></p></li>
-<li id="fn28"><p>There is a ceiling to how well even an all-knowing model could perform when predicting overtime because the games are so close to coin flips.<a href="3-results.html#fnref28" class="footnote-back">↩</a></p></li>
+<ol start="29">
+<li id="fn29"><p>The training set is comprised of all the 2010-2016 data. During the tuning process each model was trained only on 2010-2015 data.<a href="3-results.html#fnref29" class="footnote-back">↩</a></p></li>
+<li id="fn30"><p>There is a ceiling to how well even an all-knowing model could perform when predicting overtime because the games are so close to coin flips.<a href="3-results.html#fnref30" class="footnote-back">↩</a></p></li>
 </ol>
 </div>
             </section>
