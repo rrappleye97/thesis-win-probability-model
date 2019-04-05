@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html >
+
+<head>
+
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Chapter 6 Discussion | Modeling Win Probability in NFL Games</title>
+  <meta name="description" content="Chapter 6 Discussion | Modeling Win Probability in NFL Games">
+  <meta name="generator" content="bookdown  and GitBook 2.6.7">
+
+  <meta property="og:title" content="Chapter 6 Discussion | Modeling Win Probability in NFL Games" />
+  <meta property="og:type" content="book" />
+  
+  
+  
+  
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Chapter 6 Discussion | Modeling Win Probability in NFL Games" />
+  
+  
+  
+
+<meta name="author" content="Robert Rappleye">
+
+
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  
+  
+<link rel="prev" href="5-applications.html">
+<link rel="next" href="7-the-first-appendix.html">
+<script src="libs/jquery-2.2.3/jquery.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+
+
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li><a href="./"></a></li>
+<li class="divider"></li>
+<li class="chapter" data-level="1" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i><b>1</b> Delete line 7 if you only have one advisor</a></li>
+<li class="chapter" data-level="" data-path="literature-review.html"><a href="literature-review.html"><i class="fa fa-check"></i>Literature Review</a></li>
+<li class="chapter" data-level="2" data-path="2-data.html"><a href="2-data.html"><i class="fa fa-check"></i><b>2</b> Data</a></li>
+<li class="chapter" data-level="3" data-path="3-methodology.html"><a href="3-methodology.html"><i class="fa fa-check"></i><b>3</b> Methodology</a><ul>
+<li class="chapter" data-level="3.1" data-path="3-methodology.html"><a href="3-methodology.html#modeling-win-probability-on-kickoffs-and-point-after-attempts"><i class="fa fa-check"></i><b>3.1</b> Modeling Win Probability on Kickoffs and Point After Attempts</a></li>
+<li class="chapter" data-level="3.2" data-path="3-methodology.html"><a href="3-methodology.html#modeling-win-probability-on-first-and-ten"><i class="fa fa-check"></i><b>3.2</b> Modeling Win Probability on First and Ten</a></li>
+<li class="chapter" data-level="3.3" data-path="3-methodology.html"><a href="3-methodology.html#modeling-win-probability-in-other-scenarios"><i class="fa fa-check"></i><b>3.3</b> Modeling Win Probability in Other Scenarios</a></li>
+<li class="chapter" data-level="3.4" data-path="3-methodology.html"><a href="3-methodology.html#reasoning-behind-modeling-methodology"><i class="fa fa-check"></i><b>3.4</b> Reasoning Behind Modeling Methodology</a></li>
+</ul></li>
+<li class="chapter" data-level="4" data-path="4-results.html"><a href="4-results.html"><i class="fa fa-check"></i><b>4</b> Results</a></li>
+<li class="chapter" data-level="5" data-path="5-applications.html"><a href="5-applications.html"><i class="fa fa-check"></i><b>5</b> Applications</a></li>
+<li class="chapter" data-level="6" data-path="6-discussion.html"><a href="6-discussion.html"><i class="fa fa-check"></i><b>6</b> Discussion</a><ul>
+<li class="chapter" data-level="6.1" data-path="6-discussion.html"><a href="6-discussion.html#conclusion"><i class="fa fa-check"></i><b>6.1</b> Conclusion</a></li>
+</ul></li>
+<li class="chapter" data-level="7" data-path="7-the-first-appendix.html"><a href="7-the-first-appendix.html"><i class="fa fa-check"></i><b>7</b> The First Appendix</a><ul>
+<li class="chapter" data-level="7.1" data-path="7-the-first-appendix.html"><a href="7-the-first-appendix.html#point-chart"><i class="fa fa-check"></i><b>7.1</b> 2 point chart</a></li>
+<li class="chapter" data-level="7.2" data-path="7-the-first-appendix.html"><a href="7-the-first-appendix.html#clock-stop-gbm-to-predict-p_stop_g_k"><i class="fa fa-check"></i><b>7.2</b> Clock Stop GBM to Predict <span class="math inline">\(p_{stop_{G_k}}\)</span></a></li>
+<li class="chapter" data-level="7.3" data-path="7-the-first-appendix.html"><a href="7-the-first-appendix.html#downs-outcome-formulas"><i class="fa fa-check"></i><b>7.3</b> Downs outcome formulas</a></li>
+<li class="chapter" data-level="7.4" data-path="7-the-first-appendix.html"><a href="7-the-first-appendix.html#gbm-for-p_penaltyreplay"><i class="fa fa-check"></i><b>7.4</b> GBM for <span class="math inline">\(P_{penaltyReplay}\)</span></a></li>
+<li class="chapter" data-level="7.5" data-path="7-the-first-appendix.html"><a href="7-the-first-appendix.html#gbms-for-p_score"><i class="fa fa-check"></i><b>7.5</b> GBMs for <span class="math inline">\(P_{score}\)</span></a></li>
+<li class="chapter" data-level="7.6" data-path="7-the-first-appendix.html"><a href="7-the-first-appendix.html#linear-models-for-delta-field-position-outcome_g_k"><i class="fa fa-check"></i><b>7.6</b> Linear Models for <span class="math inline">\(\Delta field position | outcome_{g_k}\)</span></a></li>
+</ul></li>
+<li class="chapter" data-level="" data-path="references.html"><a href="references.html"><i class="fa fa-check"></i>References</a></li>
+<li class="divider"></li>
+<li><a href="https://github.com/rstudio/bookdown" target="blank">Published with bookdown</a></li>
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">Modeling Win Probability in NFL Games</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="discussion" class="section level1">
+<h1><span class="header-section-number">Chapter 6</span> Discussion</h1>
+<p>Though the model performs well, it is not without its limitations. We model change in score using:</p>
+<p><span class="math inline">\(\Delta score_i \sim \mathcal{N}(\mu_i,\sigma^{2}_i)\)</span> where
+<span class="math inline">\(\mu_i\)</span> and <span class="math inline">\(\sigma_i\)</span> are defined in section 2.1.</p>
+<p>But drawing mu from a linear model assumes homoscedasticity, an assumption that is almost certainly incorrect. Additionally, none of the models account for different levels of uncertainty in the variables that describe team strength. It seems likely that the distribution of a team’s possible DVOA ratings is much narrower at the end of the season than at the beginning. Ideally the model would reflect that. The model is also probably slightly off in certain situations where a specific outcome has not occurred in the data used to train the model. For example, there were not any safeties in overtime from 2010 to 2016 so the models used to predict the next scoring event or the outcome for a given set of downs will specify a probability of zero for a safety. While the probability of a safety in overtime is very low, it is not zero. Another model limitation can be found in the handling of field goal attempts, extra point attempts and two point conversions attempts where the probability of success is calculated using the league average success probability for each event as opposed to a model that takes into account the teams in question.</p>
+<p>The model is also limited in the data it takes into account. Injuries to key players are not considered. Though the point spread is thought to take injuries into account, this still leaves the model blind both to in-game injuries and to the effects that injuries may have on the composition of a given team’s strengths. The model also does not take weather into account. Generally this probably does not affect results much, but it would be nice to have a heads up when something extreme is happening in our dataset, like temperatures far below zero or snowstorms that verge on blizzards. The model also does not currently consider the strategic acumen of either coach, a factor that would seem to be important in close games. One last blind spot concerns timeouts, as the model currently does not consider them until ten or fewer minutes remain. Timeouts seem to help teams less by increasing the raw expectation of score differential and more by helping teams modify the distribution of discrete score differentials to their advantage at the end of games. As such, the choice was made not to include them in the linear models from which mu and sigma are taken.</p>
+<div id="conclusion" class="section level2">
+<h2><span class="header-section-number">6.1</span> Conclusion</h2>
+<p>By using a series of models to compute a distribution of EPA by sampling future game states, a variation of the trick PFR uses to derive win probability from the Normal CDF, and GBMs to handle win probability predictions when normality assumptions break down, the modeling process of this paper is able to achieve robust predictive results. Future versions of this model will ideally implement a form of heteroscedastic regression to better model the mu parameter as well as measures of uncertainty for predictors that stabilize over the course of a season. Future work may also be done to both quantify and include the effects of injury on win probability. Horowitz, Ventura, and Yurko (2018) detail a mechanism for applying the idea of “wins above replacement” (WAR), first developed in baseball, to the NFL. Such a measurement for NFL players would be very helpful for measuring the impact injuries might exert on win probability.</p>
+
+</div>
+</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+<a href="5-applications.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="7-the-first-appendix.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/lunr.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+"sharing": {
+"github": false,
+"facebook": true,
+"twitter": true,
+"google": false,
+"linkedin": false,
+"weibo": false,
+"instapaper": false,
+"vk": false,
+"all": ["facebook", "google", "twitter", "linkedin", "weibo", "instapaper"]
+},
+"fontsettings": {
+"theme": "white",
+"family": "sans",
+"size": 2
+},
+"edit": {
+"link": null,
+"text": null
+},
+"history": {
+"link": null,
+"text": null
+},
+"download": [["thesis.pdf", "PDF"], ["thesis.epub", "EPUB"], ["thesis.docx", "Word"]],
+"toc": {
+"collapse": "section"
+}
+});
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    var src = "true";
+    if (src === "" || src === "true") src = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML";
+    if (location.protocol !== "file:" && /^https?:/.test(src))
+      src = src.replace(/^https?:/, '');
+    script.src = src;
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+</body>
+
+</html>

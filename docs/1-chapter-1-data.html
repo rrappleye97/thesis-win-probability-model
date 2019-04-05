@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html >
+
+<head>
+
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Chapter 1 Chapter 1 Data | Modeling Win Probability in NFL Games</title>
+  <meta name="description" content="Chapter 1 Chapter 1 Data | Modeling Win Probability in NFL Games">
+  <meta name="generator" content="bookdown  and GitBook 2.6.7">
+
+  <meta property="og:title" content="Chapter 1 Chapter 1 Data | Modeling Win Probability in NFL Games" />
+  <meta property="og:type" content="book" />
+  
+  
+  
+  
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Chapter 1 Chapter 1 Data | Modeling Win Probability in NFL Games" />
+  
+  
+  
+
+<meta name="author" content="Robert Rappleye">
+
+
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  
+  
+<link rel="prev" href="literature-review.html">
+<link rel="next" href="math-typesetting.html">
+<script src="libs/jquery-2.2.3/jquery.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+
+<style type="text/css">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; position: absolute; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; }
+pre.numberSource a.sourceLine:empty
+  { position: absolute; }
+pre.numberSource a.sourceLine::before
+  { content: attr(data-line-number);
+    position: absolute; left: -5em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li><a href="./"></a></li>
+<li class="divider"></li>
+<li class="chapter" data-level="" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i>Introduction</a></li>
+<li class="chapter" data-level="" data-path="literature-review.html"><a href="literature-review.html"><i class="fa fa-check"></i>Literature Review</a><ul>
+<li class="chapter" data-level="0.1" data-path="literature-review.html"><a href="literature-review.html#lists"><i class="fa fa-check"></i><b>0.1</b> Lists</a></li>
+<li class="chapter" data-level="0.2" data-path="literature-review.html"><a href="literature-review.html#line-breaks"><i class="fa fa-check"></i><b>0.2</b> Line breaks</a></li>
+<li class="chapter" data-level="0.3" data-path="literature-review.html"><a href="literature-review.html#r-chunks"><i class="fa fa-check"></i><b>0.3</b> R chunks</a></li>
+<li class="chapter" data-level="0.4" data-path="literature-review.html"><a href="literature-review.html#inline-code"><i class="fa fa-check"></i><b>0.4</b> Inline code</a></li>
+<li class="chapter" data-level="0.5" data-path="literature-review.html"><a href="literature-review.html#including-plots"><i class="fa fa-check"></i><b>0.5</b> Including plots</a></li>
+<li class="chapter" data-level="0.6" data-path="literature-review.html"><a href="literature-review.html#loading-and-exploring-data"><i class="fa fa-check"></i><b>0.6</b> Loading and exploring data</a></li>
+<li class="chapter" data-level="0.7" data-path="literature-review.html"><a href="literature-review.html#additional-resources"><i class="fa fa-check"></i><b>0.7</b> Additional resources</a></li>
+</ul></li>
+<li class="chapter" data-level="1" data-path="1-chapter-1-data.html"><a href="1-chapter-1-data.html"><i class="fa fa-check"></i><b>1</b> Chapter 1 Data</a></li>
+<li class="chapter" data-level="" data-path="math-typesetting.html"><a href="math-typesetting.html"><i class="fa fa-check"></i>Math typesetting</a><ul>
+<li class="chapter" data-level="1.1" data-path="math-typesetting.html"><a href="math-typesetting.html#math"><i class="fa fa-check"></i><b>1.1</b> Math</a></li>
+</ul></li>
+<li class="chapter" data-level="2" data-path="2-ref-labels.html"><a href="2-ref-labels.html"><i class="fa fa-check"></i><b>2</b> Tables, Graphics, References, and Labels</a><ul>
+<li class="chapter" data-level="2.1" data-path="2-ref-labels.html"><a href="2-ref-labels.html#tables"><i class="fa fa-check"></i><b>2.1</b> Tables</a></li>
+<li class="chapter" data-level="2.2" data-path="2-ref-labels.html"><a href="2-ref-labels.html#figures"><i class="fa fa-check"></i><b>2.2</b> Figures</a></li>
+<li class="chapter" data-level="2.3" data-path="2-ref-labels.html"><a href="2-ref-labels.html#footnotes-and-endnotes"><i class="fa fa-check"></i><b>2.3</b> Footnotes and Endnotes</a></li>
+<li class="chapter" data-level="2.4" data-path="2-ref-labels.html"><a href="2-ref-labels.html#bibliographies"><i class="fa fa-check"></i><b>2.4</b> Bibliographies</a></li>
+<li class="chapter" data-level="2.5" data-path="2-ref-labels.html"><a href="2-ref-labels.html#anything-else"><i class="fa fa-check"></i><b>2.5</b> Anything else?</a></li>
+</ul></li>
+<li class="chapter" data-level="3" data-path="3-results.html"><a href="3-results.html"><i class="fa fa-check"></i><b>3</b> Results</a></li>
+<li class="chapter" data-level="4" data-path="4-applications.html"><a href="4-applications.html"><i class="fa fa-check"></i><b>4</b> Applications</a></li>
+<li class="appendix"><span><b>Appendix</b></span></li>
+<li class="chapter" data-level="A" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html"><i class="fa fa-check"></i><b>A</b> The First Appendix</a></li>
+<li class="chapter" data-level="B" data-path="B-the-second-appendix-for-fun.html"><a href="B-the-second-appendix-for-fun.html"><i class="fa fa-check"></i><b>B</b> The Second Appendix, for Fun</a></li>
+<li class="chapter" data-level="" data-path="references.html"><a href="references.html"><i class="fa fa-check"></i>References</a></li>
+<li class="divider"></li>
+<li><a href="https://github.com/rstudio/bookdown" target="blank">Published with bookdown</a></li>
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">Modeling Win Probability in NFL Games</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="chapter-1-data" class="section level1">
+<h1><span class="header-section-number">Chapter 1</span> Chapter 1 Data</h1>
+<p><strong>1.1 Description of the Play-by-Play Data</strong>
+The play-by-play dataset comes from the NFL JSON API courtesy of the nflscrapR package, developed by Maksim Horowitz and Ron Yurko, which gives R users the API data in an easily digestible data frame. This package was used to compile a dataset of every play from the 2010 through 2017 NFL seasons. The dataset includes a number of variables that describe the game state including down, yards to go until a first down, yard line, and seconds remaining. The dataset also contains many variables that were helpful when it came to cleaning the data and adding features, including a description of each play that uses specific and consistent verbiage for different types of plays, making it easy to use text matching to search the dataset.</p>
+<p><strong>1.2 Cleaning the Data</strong>
+Though the nflscrapR package simplified the complexities of pulling data from the NFL JSON API and formatted it nicely in a dataframe, the actual contents of the data was still a bit raw. I matched each game to a dataset of game outcomes and pre-game point spreads<a href="#fn5" class="footnote-ref" id="fnref5"><sup>5</sup></a> provided by The Prediction Tracker, and looked for discrepancies between the final score as listed in the play-by-play dataset and the point spread dataset to find games and plays in which the score was incremented incorrectly in the play-by-play dataset. I also looked for plays where the number of seconds remaining or the down changed from one play to the next in an incoherent manner to either fix or omit clearly erroneous entries.</p>
+<p><strong>1.3 Incorporating Other Datasets</strong>
+Though the play-by-play dataset has everything I need as far as describing the game state is concerned, it does not contain any information to describe the teams playing in each game. To remedy this issue I consulted several other datasets. I grabbed grades assigned to quarterbacks from 2008 on by Pro Football Focus (PFF) and pulled age, the pick at which a player was drafted, passing attempts and ESPN’s Total QBR from Pro Football Reference to use in a model that projects the grade a quarterback will receive in a given season<a href="#fn6" class="footnote-ref" id="fnref6"><sup>6</sup></a>. I grabbed the aforementioned point spreads and game outcomes from The Prediction Tracker. I also pulled week by week Defense-adjusted Value Over Average (DVOA) ratings for offense, defense and special teams from Football Outsiders through the use of a web scraping script. Each of these descriptors of team (or player) strength was mapped to the rows of the dataset that contained the appropriate team and week match as either a “Home Team” descriptor or an “Away team” descriptor to avoid situations where descriptors were assigned to the wrong team in a given game. An example of some of the predictors in the data might look something like this:</p>
+<table>
+<caption><span id="tab:sample-data">Table 1.1: </span>Sample Use of Outside Data</caption>
+<thead>
+<tr class="header">
+<th align="right">vegas.line</th>
+<th align="right">home.grade</th>
+<th align="right">away.grade</th>
+<th align="right">home.o.dvoa</th>
+<th align="right">home.d.dvoa</th>
+<th align="right">away.o.dvoa</th>
+<th align="right">away.d.dvoa</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">-3.0</td>
+<td align="right">68.42796</td>
+<td align="right">80.86558</td>
+<td align="right">10.400000</td>
+<td align="right">2.300000</td>
+<td align="right">18.7000000</td>
+<td align="right">1.400000</td>
+</tr>
+<tr class="even">
+<td align="right">4.5</td>
+<td align="right">72.63039</td>
+<td align="right">69.87005</td>
+<td align="right">1.580000</td>
+<td align="right">-2.880000</td>
+<td align="right">17.5200000</td>
+<td align="right">-5.360000</td>
+</tr>
+<tr class="odd">
+<td align="right">-3.0</td>
+<td align="right">62.61018</td>
+<td align="right">76.90695</td>
+<td align="right">-17.700000</td>
+<td align="right">3.900000</td>
+<td align="right">-0.0333333</td>
+<td align="right">1.600000</td>
+</tr>
+<tr class="even">
+<td align="right">-5.5</td>
+<td align="right">70.23131</td>
+<td align="right">91.45977</td>
+<td align="right">5.166667</td>
+<td align="right">9.733333</td>
+<td align="right">29.2333333</td>
+<td align="right">11.266667</td>
+</tr>
+<tr class="odd">
+<td align="right">7.0</td>
+<td align="right">72.91262</td>
+<td align="right">71.18786</td>
+<td align="right">19.842857</td>
+<td align="right">-1.785714</td>
+<td align="right">-26.6285714</td>
+<td align="right">6.457143</td>
+</tr>
+</tbody>
+</table>
+<p>Where “home.grade” and “away.grade” refer to the projected PFF grades for each team’s quarterback. Offensive DVOA is represented by “o.dvoa”, with “d.dvoa” doing the same for defensive DVOA for each team. The vegas line, or point spread, is the amount the home team is favored by. These variables are transformed to describe the “possession team”—the team with the ball—and the defensive team when eventually used in models. Additionally, it is important to note that each value of DVOA is given a prior with the pre-season value of DVOA for the team in question to prevent early season games from giving extreme values of DVOA. This prior has a weight of four games.</p>
+<p><strong>1.4 Exploratory Data Analysis</strong>
+To get a sense of whether or not the assumption made by PFR that the change in score differential at a given point in the game is normally distributed we plot the density of change in score differential for the first five minutes of each quarter. We only sample data points from kickoffs in order to give equal weight to each unique score, game pair in each dataset.</p>
+<p><img src="thesis_files/figure-html/normality-eda-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>We next take a look at how the absolute value of change in score differential scales as the game goes on, again sampling only from kickoffs.This should give a sense of whether or not variance scales as the game progresses.</p>
+<p><img src="thesis_files/figure-html/variance-eda-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>We also take a look at the probability of the next scoring play being of a given type based on the yardline the ball is currently positioned at, this time for all first down plays. This will give an idea of whether the relationship between yard line and next scoring event is linear for different events.</p>
+<p><img src="thesis_files/figure-html/scoring-plays-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>Finally, we’ll take a look at how the probability of different outcomes on a given set of downs changes with the yards to go. We’ll output graphs for both first and second down.</p>
+<p><img src="thesis_files/figure-html/downs-plays-1.png" width="672" style="display: block; margin: auto;" /><img src="thesis_files/figure-html/downs-plays-2.png" width="672" style="display: block; margin: auto;" /></p>
+</div>
+<div class="footnotes">
+<hr />
+<ol start="5">
+<li id="fn5"><p>The pre-game lines were usually compiled on Sunday mornings according to the steward of the website so they will occasionally differ from the closing line<a href="1-chapter-1-data.html#fnref5" class="footnote-back">↩</a></p></li>
+<li id="fn6"><p>This model is included in the appendix<a href="1-chapter-1-data.html#fnref6" class="footnote-back">↩</a></p></li>
+</ol>
+</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+<a href="literature-review.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="math-typesetting.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/lunr.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+"sharing": {
+"github": false,
+"facebook": true,
+"twitter": true,
+"google": false,
+"linkedin": false,
+"weibo": false,
+"instapaper": false,
+"vk": false,
+"all": ["facebook", "google", "twitter", "linkedin", "weibo", "instapaper"]
+},
+"fontsettings": {
+"theme": "white",
+"family": "sans",
+"size": 2
+},
+"edit": {
+"link": null,
+"text": null
+},
+"history": {
+"link": null,
+"text": null
+},
+"download": [["thesis.pdf", "PDF"], ["thesis.epub", "EPUB"], ["thesis.docx", "Word"]],
+"toc": {
+"collapse": "section"
+}
+});
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    var src = "true";
+    if (src === "" || src === "true") src = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML";
+    if (location.protocol !== "file:" && /^https?:/.test(src))
+      src = src.replace(/^https?:/, '');
+    script.src = src;
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+</body>
+
+</html>

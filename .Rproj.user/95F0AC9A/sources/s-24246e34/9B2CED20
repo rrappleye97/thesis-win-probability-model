@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1554423350854.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "9B2CED20",
+    "lastKnownWriteTime" : 1554423386,
+    "last_content_update" : 1554423386400,
+    "path" : "~/thesis-win-probability-model/index/04-results.Rmd",
+    "project_path" : "index/04-results.Rmd",
+    "properties" : {
+        "cursorPosition" : "57,60",
+        "scrollLine" : "47"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 7,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

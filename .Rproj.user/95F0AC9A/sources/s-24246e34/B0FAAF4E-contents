@@ -1,0 +1,56 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+# Applications
+This model has a variety of uses. It can be used by fans to improve their viewing experience—it’s natural for a fan to be curious about his or her team’s probability of winning during an NFL game. It can also be used to determine which plays contributed most to the outcome of the game.  
+
+Below is a graph of a 2017 regular season game between the Pittsburgh Steelers and Detroit Lions.  
+
+```{r examplegraph, results="asis", echo=FALSE, cache = TRUE}
+library(teamcolors)
+pit.color = teamcolors$secondary[which(teamcolors$name == "Pittsburgh Steelers")]
+det.color = teamcolors$primary[which(teamcolors$name == "Detroit Lions")]
+
+det.pit.game = test.set[which((test.set$posteam == "PIT" | test.set$posteam == "DET") & (test.set$DefensiveTeam == "PIT" | test.set$DefensiveTeam == "DET")),]
+
+TimeSecs = c(det.pit.game$TimeSecs, det.pit.game$TimeSecs)
+predictions = c(ifelse(det.pit.game$posteam == "DET", det.pit.game$predictions, 1-det.pit.game$predictions), 
+  ifelse(det.pit.game$posteam == "PIT", det.pit.game$predictions, 1-det.pit.game$predictions))
+team = c(rep("DET", nrow(det.pit.game)), rep("PIT", nrow(det.pit.game)))
+
+ggplot() +
+  geom_line(size = 1, aes(x = TimeSecs, y = predictions, color = team)) +
+  geom_hline(yintercept = 0.5, color = "gray", linetype = "dashed") +
+  scale_color_manual(labels = c("DET", "PIT"),
+                     values = c(det.color, pit.color),
+                     guide = FALSE) +
+  scale_x_reverse(breaks = seq(0, 3600, 300)) + 
+  annotate("text", x = 3000, y = .2, label = "DET", color = det.color, size = 8) + 
+  annotate("text", x = 3000, y = .8, label = "PIT", color = pit.color, size = 8) +
+  geom_vline(xintercept = 900, linetype = "dashed", black) + 
+  geom_vline(xintercept = 1800, linetype = "dashed", black) + 
+  geom_vline(xintercept = 2700, linetype = "dashed", black) + 
+  geom_vline(xintercept = 0, linetype = "dashed", black) + 
+  labs(
+    x = "Time Remaining (seconds)",
+    y = "Win Probability",
+    title = "2017 Regular Season Win Probability Chart",
+    subtitle = "Detroit Lions vs. Pittsburgh Steelers",
+    caption = "Play by play data from nflscrapR"
+  ) + theme_bw()
+```
+
+
+The Steelers would win the game 20-15, taking a 20-12 lead in the third quarter on a 97 yard touchdown pass from Ben Roethlisberger to Juju Smith-Schuster. We can find that this play boosted the Steelers chances of winning from 57.8% to 87.1%, a boost of 29.3%. In fact, this play turns out to be the most impactful play of the goal. A 44 yard pass from Matthew Stafford to Eric Ebron to draw the Lions to the Pittsburgh 11 yard line with about three minutes remaining and the Lions down five was the only other play to swing the game more than 20% (it checked in at a 22.5% swing).  
+
+We can also use the model to evaluate coaching decisions, an application of win probability models that has been pioneered by Brian Burke (citation) and was also discussed by Lock and Nettleton (2014) and Horowitz, Ventura and Yurko (2018). During the game between Detroit and Pittsburgh detailed above, the Lions were down 13-12 midway through the third quarter and faced a 4th and goal from the Pittsburgh one yard line. Faced with a decision to attempt a field goal or go for a touchdown, the Lions opted to go for it. We can determine a breakeven point for the probability of scoring on the fourth down attempt that will make the value of a field goal attempt equal to that of going for it on fourth down. To do this we solve:  
+
+$P_{score}*P(win \:|\: score)+(1-p_{score})* P(win \:| \: no \: score) =$    
+$p_{make} * P(win \:| \:make) + p_{miss} * P(win \:| \:miss)$  
+
+Where $p_{make}$ is calculated using the GBM discussed in 2.3 and the ball is assumed to be at the one yard line in the event of a failed fourth down attempt. We find that $p_{score}$ must be greater than 37.0% to justify going for it. The league average success rate on 2-point conversions is 47.9%, and the Lions were at the one yard line, even closer than the two. They likely made the correct call.  
+
+Additionally, as Horowitz, Ventura, and Yurko (2018) show, player value can be derived by assigning credit to players on the field for fluctuations in win probability from one play to the next, though such an analysis is beyond the scope of this paper. The model might also be put to use to help determine when and in which direction to trade on prediction markets that deal with the probability of a given team winning an NFL game, though this application is also not investigated in this paper.
+

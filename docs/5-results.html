@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html >
+
+<head>
+
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Chapter 5 Results | Modeling Win Probability in NFL Games</title>
+  <meta name="description" content="Chapter 5 Results | Modeling Win Probability in NFL Games">
+  <meta name="generator" content="bookdown  and GitBook 2.6.7">
+
+  <meta property="og:title" content="Chapter 5 Results | Modeling Win Probability in NFL Games" />
+  <meta property="og:type" content="book" />
+  
+  
+  
+  
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Chapter 5 Results | Modeling Win Probability in NFL Games" />
+  
+  
+  
+
+<meta name="author" content="Robert Rappleye">
+
+
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  
+  
+<link rel="prev" href="4-ref-labels.html">
+<link rel="next" href="6-organization.html">
+<script src="libs/jquery-2.2.3/jquery.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+
+
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li><a href="./"></a></li>
+<li class="divider"></li>
+<li class="chapter" data-level="1" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i><b>1</b> Delete line 7 if you only have one advisor</a></li>
+<li class="chapter" data-level="2" data-path="2-rmd-basics.html"><a href="2-rmd-basics.html"><i class="fa fa-check"></i><b>2</b> R Markdown Basics</a><ul>
+<li class="chapter" data-level="2.1" data-path="2-rmd-basics.html"><a href="2-rmd-basics.html#lists"><i class="fa fa-check"></i><b>2.1</b> Lists</a></li>
+<li class="chapter" data-level="2.2" data-path="2-rmd-basics.html"><a href="2-rmd-basics.html#line-breaks"><i class="fa fa-check"></i><b>2.2</b> Line breaks</a></li>
+<li class="chapter" data-level="2.3" data-path="2-rmd-basics.html"><a href="2-rmd-basics.html#r-chunks"><i class="fa fa-check"></i><b>2.3</b> R chunks</a></li>
+<li class="chapter" data-level="2.4" data-path="2-rmd-basics.html"><a href="2-rmd-basics.html#inline-code"><i class="fa fa-check"></i><b>2.4</b> Inline code</a></li>
+<li class="chapter" data-level="2.5" data-path="2-rmd-basics.html"><a href="2-rmd-basics.html#including-plots"><i class="fa fa-check"></i><b>2.5</b> Including plots</a></li>
+<li class="chapter" data-level="2.6" data-path="2-rmd-basics.html"><a href="2-rmd-basics.html#loading-and-exploring-data"><i class="fa fa-check"></i><b>2.6</b> Loading and exploring data</a></li>
+<li class="chapter" data-level="2.7" data-path="2-rmd-basics.html"><a href="2-rmd-basics.html#additional-resources"><i class="fa fa-check"></i><b>2.7</b> Additional resources</a></li>
+</ul></li>
+<li class="chapter" data-level="3" data-path="3-math.html"><a href="3-math.html"><i class="fa fa-check"></i><b>3</b> Math typesetting</a><ul>
+<li class="chapter" data-level="3.1" data-path="3-math.html"><a href="3-math.html#math-1"><i class="fa fa-check"></i><b>3.1</b> Math</a></li>
+</ul></li>
+<li class="chapter" data-level="4" data-path="4-ref-labels.html"><a href="4-ref-labels.html"><i class="fa fa-check"></i><b>4</b> Tables, Graphics, References, and Labels</a><ul>
+<li class="chapter" data-level="4.1" data-path="4-ref-labels.html"><a href="4-ref-labels.html#tables"><i class="fa fa-check"></i><b>4.1</b> Tables</a></li>
+<li class="chapter" data-level="4.2" data-path="4-ref-labels.html"><a href="4-ref-labels.html#figures"><i class="fa fa-check"></i><b>4.2</b> Figures</a></li>
+<li class="chapter" data-level="4.3" data-path="4-ref-labels.html"><a href="4-ref-labels.html#footnotes-and-endnotes"><i class="fa fa-check"></i><b>4.3</b> Footnotes and Endnotes</a></li>
+<li class="chapter" data-level="4.4" data-path="4-ref-labels.html"><a href="4-ref-labels.html#bibliographies"><i class="fa fa-check"></i><b>4.4</b> Bibliographies</a></li>
+<li class="chapter" data-level="4.5" data-path="4-ref-labels.html"><a href="4-ref-labels.html#anything-else"><i class="fa fa-check"></i><b>4.5</b> Anything else?</a></li>
+</ul></li>
+<li class="chapter" data-level="5" data-path="5-results.html"><a href="5-results.html"><i class="fa fa-check"></i><b>5</b> Results</a></li>
+<li class="chapter" data-level="6" data-path="6-organization.html"><a href="6-organization.html"><i class="fa fa-check"></i><b>6</b> Organization</a></li>
+<li class="chapter" data-level="" data-path="conclusion.html"><a href="conclusion.html"><i class="fa fa-check"></i>Conclusion</a></li>
+<li class="appendix"><span><b>Appendix</b></span></li>
+<li class="chapter" data-level="A" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html"><i class="fa fa-check"></i><b>A</b> The First Appendix</a></li>
+<li class="chapter" data-level="B" data-path="B-the-second-appendix-for-fun.html"><a href="B-the-second-appendix-for-fun.html"><i class="fa fa-check"></i><b>B</b> The Second Appendix, for Fun</a></li>
+<li class="chapter" data-level="" data-path="references.html"><a href="references.html"><i class="fa fa-check"></i>References</a></li>
+<li class="divider"></li>
+<li><a href="https://github.com/rstudio/bookdown" target="blank">Published with bookdown</a></li>
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">Modeling Win Probability in NFL Games</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="results" class="section level1">
+<h1><span class="header-section-number">Chapter 5</span> Results</h1>
+<p>Model performance is tested by re-training each sub-model on the entire training set and evaluating the performance of the models when the protocol described in chapter 3 is used. Results are then are then compared against the other two models for which we have data—the models developed by Lock and Nettleton (2014) and Horowitz, Ventura, and Yurko (2018). The two loss functions used to measure model performance are Brier score, the mean of the squared distance between each prediction and the corresponding outcome, and log loss, the mean of the ln(1 - distance) for each prediction and the corresponding outcome.</p>
+<table>
+<caption><span id="tab:resultsoverall">Table 5.1: </span>Brier score by model</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th align="right">My model</th>
+<th align="right">nflscrapR model</th>
+<th align="right">Lock and Nettleton model</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Brier score</td>
+<td align="right">0.133</td>
+<td align="right">0.155</td>
+<td align="right">NA</td>
+</tr>
+</tbody>
+</table>
+<table>
+<caption><span id="tab:resultsoverall">Table 5.1: </span>Log loss by model</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th align="right">My model</th>
+<th align="right">nflscrapR model</th>
+<th align="right">Lock and Nettleton model</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Log loss</td>
+<td align="right">-0.41</td>
+<td align="right">-0.465</td>
+<td align="right">NA</td>
+</tr>
+</tbody>
+</table>
+<p>We can also see that, as expected, the model generally performs better as the game progresses with the exception of overtime. Each model tested has a Brier score above 0.25 for the overtime period, indicating that, at least for the 2017 season, each model would be better off classifying every overtime game as a coin flip.</p>
+<table>
+<caption><span id="tab:resultsquarter">Table 5.2: </span>Brier Score by Quarter</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th align="right">1st Quarter</th>
+<th align="right">2nd Quarter</th>
+<th align="right">3rd Quarter</th>
+<th align="right">4th Quarter</th>
+<th align="right">Overtime</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>My model</td>
+<td align="right">0.183</td>
+<td align="right">0.156</td>
+<td align="right">0.112</td>
+<td align="right">0.081</td>
+<td align="right">0.255</td>
+</tr>
+<tr class="even">
+<td>nflscrapR model</td>
+<td align="right">0.220</td>
+<td align="right">0.180</td>
+<td align="right">0.133</td>
+<td align="right">0.089</td>
+<td align="right">0.305</td>
+</tr>
+<tr class="odd">
+<td>Lock and Nettleton Model</td>
+<td align="right">0.303</td>
+<td align="right">0.229</td>
+<td align="right">0.163</td>
+<td align="right">0.097</td>
+<td align="right">0.480</td>
+</tr>
+</tbody>
+</table>
+<p>A plot has been included that omits overtime to show how average model performance improves over the course of games
+<img src="thesis_files/figure-html/resultsquarterplot-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>The model also performs relatively evenly across each down (and kickoff and point after attempts), suggesting the predictions are mostly consistent.</p>
+<table>
+<caption><span id="tab:resultsdown">Table 5.3: </span>Brier Score by Down</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th align="right">1st Quarter</th>
+<th align="right">2nd Quarter</th>
+<th align="right">3rd Quarter</th>
+<th align="right">4th Quarter</th>
+<th align="right">Overtime</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>My model</td>
+<td align="right">0.183</td>
+<td align="right">0.156</td>
+<td align="right">0.112</td>
+<td align="right">0.081</td>
+<td align="right">0.255</td>
+</tr>
+<tr class="even">
+<td>nflscrapR model</td>
+<td align="right">0.220</td>
+<td align="right">0.180</td>
+<td align="right">0.133</td>
+<td align="right">0.089</td>
+<td align="right">0.305</td>
+</tr>
+<tr class="odd">
+<td>Lock and Nettleton Model</td>
+<td align="right">0.303</td>
+<td align="right">0.229</td>
+<td align="right">0.163</td>
+<td align="right">0.097</td>
+<td align="right">0.480</td>
+</tr>
+</tbody>
+</table>
+<p>To test calibration game outcomes are grouped by bins that correspond to model predictions between a set of values. Twenty bins are created with each bin representing all points where the model predictions fell within a given five percent window. The mean game outcome is then plotted against the mean model prediction for each bin where the plot for a perfectly calibrated model would show a straight line with a slope of one.</p>
+<p>I was also curious whether model predictions become more accurate as the season progresses. It seems like the indicators of team strength included in the model—DVOA ratings and point spread—would become more precise as information about a team trickles in over the course of the season. That did not seem to be the case though as the plot seems mostly random.</p>
+<p>Brier score by week plot</p>
+</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+<a href="4-ref-labels.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="6-organization.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/lunr.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+"sharing": {
+"github": false,
+"facebook": true,
+"twitter": true,
+"google": false,
+"linkedin": false,
+"weibo": false,
+"instapaper": false,
+"vk": false,
+"all": ["facebook", "google", "twitter", "linkedin", "weibo", "instapaper"]
+},
+"fontsettings": {
+"theme": "white",
+"family": "sans",
+"size": 2
+},
+"edit": {
+"link": null,
+"text": null
+},
+"history": {
+"link": null,
+"text": null
+},
+"download": [["thesis.pdf", "PDF"], ["thesis.epub", "EPUB"], ["thesis.docx", "Word"]],
+"toc": {
+"collapse": "section"
+}
+});
+});
+</script>
+
+</body>
+
+</html>

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html >
+
+<head>
+
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Chapter 4 Results | Modeling Win Probability in NFL Games</title>
+  <meta name="description" content="Chapter 4 Results | Modeling Win Probability in NFL Games">
+  <meta name="generator" content="bookdown  and GitBook 2.6.7">
+
+  <meta property="og:title" content="Chapter 4 Results | Modeling Win Probability in NFL Games" />
+  <meta property="og:type" content="book" />
+  
+  
+  
+  
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Chapter 4 Results | Modeling Win Probability in NFL Games" />
+  
+  
+  
+
+<meta name="author" content="Robert Rappleye">
+
+
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  
+  
+<link rel="prev" href="3-ref-labels.html">
+<link rel="next" href="5-applications.html">
+<script src="libs/jquery-2.2.3/jquery.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+
+<style type="text/css">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; position: absolute; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; }
+pre.numberSource a.sourceLine:empty
+  { position: absolute; }
+pre.numberSource a.sourceLine::before
+  { content: attr(data-line-number);
+    position: absolute; left: -5em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li><a href="./"></a></li>
+<li class="divider"></li>
+<li class="chapter" data-level="" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i>Introduction</a></li>
+<li class="chapter" data-level="" data-path="literature-review.html"><a href="literature-review.html"><i class="fa fa-check"></i>Literature Review</a></li>
+<li class="chapter" data-level="1" data-path="1-data.html"><a href="1-data.html"><i class="fa fa-check"></i><b>1</b> Data</a></li>
+<li class="chapter" data-level="" data-path="math-typesetting.html"><a href="math-typesetting.html"><i class="fa fa-check"></i>Math typesetting</a><ul>
+<li class="chapter" data-level="1.1" data-path="math-typesetting.html"><a href="math-typesetting.html#math"><i class="fa fa-check"></i><b>1.1</b> Math</a></li>
+</ul></li>
+<li class="chapter" data-level="2" data-path="2-methodology.html"><a href="2-methodology.html"><i class="fa fa-check"></i><b>2</b> Methodology</a><ul>
+<li class="chapter" data-level="2.1" data-path="2-methodology.html"><a href="2-methodology.html#modeling-win-probability-on-kickoffs-and-point-after-attempts"><i class="fa fa-check"></i><b>2.1</b> Modeling Win Probability on Kickoffs and Point After Attempts</a></li>
+<li class="chapter" data-level="2.2" data-path="2-methodology.html"><a href="2-methodology.html#modeling-win-probability-on-first-and-ten"><i class="fa fa-check"></i><b>2.2</b> Modeling Win Probability on First and Ten</a></li>
+<li class="chapter" data-level="2.3" data-path="2-methodology.html"><a href="2-methodology.html#modeling-win-probability-in-other-scenarios"><i class="fa fa-check"></i><b>2.3</b> Modeling Win Probability in Other Scenarios</a></li>
+<li class="chapter" data-level="2.4" data-path="2-methodology.html"><a href="2-methodology.html#reasoning-behind-modeling-methodology"><i class="fa fa-check"></i><b>2.4</b> Reasoning Behind Modeling Methodology</a></li>
+</ul></li>
+<li class="chapter" data-level="3" data-path="3-ref-labels.html"><a href="3-ref-labels.html"><i class="fa fa-check"></i><b>3</b> Tables, Graphics, References, and Labels</a><ul>
+<li class="chapter" data-level="3.1" data-path="3-ref-labels.html"><a href="3-ref-labels.html#tables"><i class="fa fa-check"></i><b>3.1</b> Tables</a></li>
+<li class="chapter" data-level="3.2" data-path="3-ref-labels.html"><a href="3-ref-labels.html#figures"><i class="fa fa-check"></i><b>3.2</b> Figures</a></li>
+<li class="chapter" data-level="3.3" data-path="3-ref-labels.html"><a href="3-ref-labels.html#footnotes-and-endnotes"><i class="fa fa-check"></i><b>3.3</b> Footnotes and Endnotes</a></li>
+<li class="chapter" data-level="3.4" data-path="3-ref-labels.html"><a href="3-ref-labels.html#bibliographies"><i class="fa fa-check"></i><b>3.4</b> Bibliographies</a></li>
+<li class="chapter" data-level="3.5" data-path="3-ref-labels.html"><a href="3-ref-labels.html#anything-else"><i class="fa fa-check"></i><b>3.5</b> Anything else?</a></li>
+</ul></li>
+<li class="chapter" data-level="4" data-path="4-results.html"><a href="4-results.html"><i class="fa fa-check"></i><b>4</b> Results</a></li>
+<li class="chapter" data-level="5" data-path="5-applications.html"><a href="5-applications.html"><i class="fa fa-check"></i><b>5</b> Applications</a></li>
+<li class="appendix"><span><b>Appendix</b></span></li>
+<li class="chapter" data-level="A" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html"><i class="fa fa-check"></i><b>A</b> The First Appendix</a></li>
+<li class="chapter" data-level="B" data-path="B-the-second-appendix-for-fun.html"><a href="B-the-second-appendix-for-fun.html"><i class="fa fa-check"></i><b>B</b> The Second Appendix, for Fun</a></li>
+<li class="chapter" data-level="" data-path="references.html"><a href="references.html"><i class="fa fa-check"></i>References</a></li>
+<li class="divider"></li>
+<li><a href="https://github.com/rstudio/bookdown" target="blank">Published with bookdown</a></li>
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">Modeling Win Probability in NFL Games</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="results" class="section level1">
+<h1><span class="header-section-number">Chapter 4</span> Results</h1>
+<p>Model performance is tested by re-training each sub-model on the entire training set and evaluating the performance of the models when the protocol described in chapter 3 is used. Results are then are then compared against the other two models for which we have data—the models developed by Lock and Nettleton (2014) and Horowitz, Ventura, and Yurko (2018). The two loss functions used to measure model performance are Brier score, the mean of the squared distance between each prediction and the corresponding outcome, and log loss, the mean of the ln(1 - distance) for each prediction and the corresponding outcome.</p>
+<table>
+<caption><span id="tab:resultsoverall">Table 4.1: </span>Brier score by model</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th align="right">My model</th>
+<th align="right">nflscrapR model</th>
+<th align="right">Lock and Nettleton model</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Brier score</td>
+<td align="right">0.133</td>
+<td align="right">0.155</td>
+<td align="right">0.195</td>
+</tr>
+</tbody>
+</table>
+<table>
+<caption><span id="tab:resultsoverall">Table 4.1: </span>Log loss by model</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th align="right">My model</th>
+<th align="right">nflscrapR model</th>
+<th align="right">Lock and Nettleton model</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Log loss</td>
+<td align="right">-0.41</td>
+<td align="right">-0.465</td>
+<td align="right">-0.563</td>
+</tr>
+</tbody>
+</table>
+<p>We can also see that, as expected, the model generally performs better as the game progresses with the exception of overtime. Each model tested has a Brier score above 0.25 for the overtime period, indicating that, at least for the 2017 season, each model would be better off classifying every overtime game as a coin flip.</p>
+<table>
+<caption><span id="tab:resultsquarter">Table 4.2: </span>Brier Score by Quarter</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th align="right">1st Quarter</th>
+<th align="right">2nd Quarter</th>
+<th align="right">3rd Quarter</th>
+<th align="right">4th Quarter</th>
+<th align="right">Overtime</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>My model</td>
+<td align="right">0.183</td>
+<td align="right">0.156</td>
+<td align="right">0.112</td>
+<td align="right">0.081</td>
+<td align="right">0.255</td>
+</tr>
+<tr class="even">
+<td>nflscrapR model</td>
+<td align="right">0.220</td>
+<td align="right">0.180</td>
+<td align="right">0.133</td>
+<td align="right">0.089</td>
+<td align="right">0.305</td>
+</tr>
+<tr class="odd">
+<td>Lock and Nettleton Model</td>
+<td align="right">0.303</td>
+<td align="right">0.229</td>
+<td align="right">0.163</td>
+<td align="right">0.097</td>
+<td align="right">0.480</td>
+</tr>
+</tbody>
+</table>
+<p>A plot has been included that omits overtime to show how average model performance improves over the course of games.</p>
+<p><img src="thesis_files/figure-html/resultsquarterplot-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>The model also performs relatively evenly across each down (and kickoff and point after attempts), suggesting the predictions are mostly consistent.</p>
+<table>
+<caption><span id="tab:resultsdown">Table 4.3: </span>Brier Score by Down</caption>
+<thead>
+<tr class="header">
+<th></th>
+<th align="right">1st Quarter</th>
+<th align="right">2nd Quarter</th>
+<th align="right">3rd Quarter</th>
+<th align="right">4th Quarter</th>
+<th align="right">Overtime</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>My model</td>
+<td align="right">0.183</td>
+<td align="right">0.156</td>
+<td align="right">0.112</td>
+<td align="right">0.081</td>
+<td align="right">0.255</td>
+</tr>
+<tr class="even">
+<td>nflscrapR model</td>
+<td align="right">0.220</td>
+<td align="right">0.180</td>
+<td align="right">0.133</td>
+<td align="right">0.089</td>
+<td align="right">0.305</td>
+</tr>
+<tr class="odd">
+<td>Lock and Nettleton Model</td>
+<td align="right">0.303</td>
+<td align="right">0.229</td>
+<td align="right">0.163</td>
+<td align="right">0.097</td>
+<td align="right">0.480</td>
+</tr>
+</tbody>
+</table>
+<p>To test calibration game outcomes are grouped by bins that correspond to model predictions between a set of values. Twenty bins are created with each bin representing all points where the model predictions fell within a given five percent window. The mean game outcome is then plotted against the mean model prediction for each bin where the plot for a perfectly calibrated model would show a straight line with a slope of one.</p>
+<p><img src="thesis_files/figure-html/calibration-1.png" width="672" style="display: block; margin: auto;" /><img src="thesis_files/figure-html/calibration-2.png" width="672" style="display: block; margin: auto;" /><img src="thesis_files/figure-html/calibration-3.png" width="672" style="display: block; margin: auto;" /></p>
+<p>I was also curious whether model predictions become more accurate as the season progresses. It seems like the indicators of team strength included in the model—DVOA ratings and point spread—would become more precise as information about a team trickles in over the course of the season.</p>
+<p><img src="thesis_files/figure-html/resultsweekly-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>The plot seems mostly random, but Brier score values did skew a bit lower as the season progressed. A linear regression of Brier score with week as a predictor found week to have a slope of -0.0018. This may be something to look at in the future.</p>
+<pre><code>Warning: Removed 8 rows containing missing values (geom_path).</code></pre>
+<p><img src="thesis_files/figure-html/examplegame-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>Our model assigns a higher probability to the Saints winning than the other models from the get-go, likely because they were assumed by the model to be a much better team than the Redskins. Our model mostly converges with the nflscrapR model as the game progresses with the two generally agreeing from the end of the third quarter on.</p>
+
+</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+<a href="3-ref-labels.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="5-applications.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/lunr.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+"sharing": {
+"github": false,
+"facebook": true,
+"twitter": true,
+"google": false,
+"linkedin": false,
+"weibo": false,
+"instapaper": false,
+"vk": false,
+"all": ["facebook", "google", "twitter", "linkedin", "weibo", "instapaper"]
+},
+"fontsettings": {
+"theme": "white",
+"family": "sans",
+"size": 2
+},
+"edit": {
+"link": null,
+"text": null
+},
+"history": {
+"link": null,
+"text": null
+},
+"download": [["thesis.pdf", "PDF"], ["thesis.epub", "EPUB"], ["thesis.docx", "Word"]],
+"toc": {
+"collapse": "section"
+}
+});
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    var src = "true";
+    if (src === "" || src === "true") src = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML";
+    if (location.protocol !== "file:" && /^https?:/.test(src))
+      src = src.replace(/^https?:/, '');
+    script.src = src;
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+</body>
+
+</html>

@@ -1,0 +1,21 @@
+# Tables, Graphics, References, and Labels {#ref-labels}
+
+## Tables
+
+In addition to the tables that can be automatically generated from a data frame in **R** that you saw in [R Markdown Basics] using the `kable` function, you can also create tables using _pandoc_. (More information is available at <http://pandoc.org/README.html#tables>.)  This might be useful if you don't have values specifically stored in **R**, but you'd like to display them in table form.  Below is an example.  Pay careful attention to the alignment in the table and hyphens to create the rows and columns.
+
+----------------------------------------------------------------------------------
+  Factors                    Correlation between Parents & Child      Inherited
+------------------------- ----------------------------------------- --------------
+  Education                                -0.49                         Yes
+  
+  Socio-Economic Status                     0.28                        Slight   
+  
+  Income                                    0.08                          No
+  
+  Family Size                               0.18                        Slight
+  
+  Occupational Prestige                     0.21                        Slight
+------------------------- ----------------------------------------- --------------
+Table: (\#tab:inher) Correlation of Inheritance Factors for Parents and Child 
+

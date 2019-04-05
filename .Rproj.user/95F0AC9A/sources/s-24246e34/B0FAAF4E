@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1554423440848.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "B0FAAF4E",
+    "lastKnownWriteTime" : 1554421554,
+    "last_content_update" : 1554421554,
+    "path" : "~/thesis-win-probability-model/index/05-applications.Rmd",
+    "project_path" : "index/05-applications.Rmd",
+    "properties" : {
+        "cursorPosition" : "10,61",
+        "scrollLine" : "7"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 8,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

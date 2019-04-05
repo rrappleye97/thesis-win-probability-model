@@ -1,0 +1,512 @@
+downs.outcome[prev.first:index] = ifelse(data$PlayType[index] == "Punt", "Punt",
+ifelse(data$PlayType[index] == "Field Goal", "Field Goal",
+ifelse(data$posteam[prev.first] == data$posteam[i], "Converted",
+ifelse(data$InterceptionThrown[index] == 1 |
+(data$Fumble[index] == 1 & data$RecFumbTeam[index] != data$posteam[index]), "Turnover",
+ifelse(data$down[i]==0 &
+(data$TimeSecs[i] == 1800|data$TimeSecs[i] == 0), "End Half",
+ifelse(data$down[index] == 4 & data$posteam[index] != data$posteam[i], "Downs", NA))))))
+}
+prev.first = ifelse(data$down[i]==0, NA, ifelse(data$down[i] == 1 &
+!(data$PenalizedTeam[index] == data$posteam[index] & data$down[index]==1), i, prev.first))
+}
+data$PenalizedTeam[which(is.na(data$PenalizedTeam))] = "None"
+data$down = as.numeric(data$down)
+data$down[which(is.na(data$down))] = 0
+downs.outcome = rep(NA, nrow(data))
+downs.yrdline = downs.outcome
+downs.time.elapsed = downs.outcome
+downs.off.td = downs.outcome
+downs.def.td = downs.outcome
+downs.fg = downs.outcome
+prev.first = NA
+for (i in c(2:(nrow(data)))){
+if(i%%10000 == 0){print(i)}
+index = i-1
+len =  index - prev.first
+if(data$down[i]==0 & !is.na(prev.first)){
+downs.time.elapsed[prev.first:index] =
+ifelse(data$GameID[i] != data$GameID[index], data$TimeSecs[prev.first] -
+data$TimeSecs[index], data$TimeSecs[prev.first] - data$TimeSecs[i])
+downs.outcome[prev.first:index] = ifelse(data$PlayType[index] == "Punt", "Punt",
+ifelse(data$PlayType[index] == "Field Goal", "Field Goal",
+ifelse(data$posteam[prev.first] == data$posteam[i], "Converted",
+ifelse(data$InterceptionThrown[index] == 1 |
+(data$Fumble[index] == 1 & data$RecFumbTeam[index] != data$posteam[index]), "Turnover",
+ifelse((data$down[i]==0 &
+(data$TimeSecs[i] == 1800|data$TimeSecs[i] == 0))|
+data$GameID[i] != data$GameID[index], "End Half", NA)))))
+downs.off.td[prev.first:index] = ifelse((data$posteam[prev.first] == data$HomeTeam &
+data$HomeScore[i] - data$HomeScore[index] %in% c(6:8)) |
+(data$posteam[prev.first] == data$AwayTeam &
+data$AwayScore[i] - data$AwayScore[index] %in% c(6:8)), rep(1, len), rep(0, len))
+downs.def.td[prev.first:index] =
+ifelse((data$DefensiveTeam[prev.first] == data$HomeTeam &
+data$HomeScore[i] - data$HomeScore[index] %in% c(6:8)) |
+(data$DefensiveTeam[prev.first] == data$AwayTeam &
+data$AwayScore[i] - data$AwayScore[index] %in% c(6:8)), rep(1, len), rep(0, len))
+}
+else if(data$down[i] == 1 & !is.na(prev.first) &
+!(data$PenalizedTeam[index] == data$posteam[index] & data$down[index] == 1)){
+downs.time.elapsed[prev.first:index] =
+data$TimeSecs[prev.first] - data$TimeSecs[i]
+downs.outcome[prev.first:index] = ifelse(data$PlayType[index] == "Punt", "Punt",
+ifelse(data$PlayType[index] == "Field Goal", "Field Goal",
+ifelse(data$posteam[prev.first] == data$posteam[i], "Converted",
+ifelse(data$InterceptionThrown[index] == 1 |
+(data$Fumble[index] == 1 & data$RecFumbTeam[index] != data$posteam[index]), "Turnover",
+ifelse(data$down[i]==0 &
+(data$TimeSecs[i] == 1800|data$TimeSecs[i] == 0), "End Half",
+ifelse(data$down[index] == 4 & data$posteam[index] != data$posteam[i], "Downs", NA))))))
+}
+prev.first = ifelse(data$down[i]==0, NA, ifelse(data$down[i] == 1 &
+!(data$PenalizedTeam[index] == data$posteam[index] & data$down[index]==1), i, prev.first))
+}
+data$PenalizedTeam[which(is.na(data$PenalizedTeam))] = "None"
+data$down = as.numeric(data$down)
+data$down[which(is.na(data$down))] = 0
+downs.outcome = rep(NA, nrow(data))
+downs.yrdline = downs.outcome
+downs.time.elapsed = downs.outcome
+downs.off.td = downs.outcome
+downs.def.td = downs.outcome
+downs.fg = downs.outcome
+prev.first = NA
+for (i in c(2:(nrow(data)))){
+if(i%%10000 == 0){print(i)}
+index = i-1
+len =  index - prev.first
+if(data$down[i]==0 & !is.na(prev.first)){
+downs.time.elapsed[prev.first:index] =
+ifelse(data$GameID[i] != data$GameID[index], data$TimeSecs[prev.first] -
+data$TimeSecs[index], data$TimeSecs[prev.first] - data$TimeSecs[i])
+downs.outcome[prev.first:index] = ifelse(data$PlayType[index] == "Punt", "Punt",
+ifelse(data$PlayType[index] == "Field Goal", "Field Goal",
+ifelse(data$posteam[prev.first] == data$posteam[i], "Converted",
+ifelse(data$InterceptionThrown[index] == 1 |
+(data$Fumble[index] == 1 & data$RecFumbTeam[index] != data$posteam[index]), "Turnover",
+ifelse((data$down[i]==0 &
+(data$TimeSecs[i] == 1800|data$TimeSecs[i] == 0))|
+data$GameID[i] != data$GameID[index], "End Half", NA)))))
+downs.off.td[prev.first:index] =
+ifelse((data$posteam[prev.first] == data$HomeTeam[index] &
+data$HomeScore[i] - data$HomeScore[index] %in% c(6:8)) |
+(data$posteam[prev.first] == data$AwayTeam &
+data$AwayScore[i] - data$AwayScore[index] %in% c(6:8)), 1, 0)
+downs.def.td[prev.first:index] =
+ifelse((data$DefensiveTeam[prev.first] == data$HomeTeam[index] &
+data$HomeScore[i] - data$HomeScore[index] %in% c(6:8)) |
+(data$DefensiveTeam[prev.first] == data$AwayTeam &
+data$AwayScore[i] - data$AwayScore[index] %in% c(6:8)), 1, 0)
+}
+else if(data$down[i] == 1 & !is.na(prev.first) &
+!(data$PenalizedTeam[index] == data$posteam[index] & data$down[index] == 1)){
+downs.time.elapsed[prev.first:index] =
+data$TimeSecs[prev.first] - data$TimeSecs[i]
+downs.outcome[prev.first:index] = ifelse(data$PlayType[index] == "Punt", "Punt",
+ifelse(data$PlayType[index] == "Field Goal", "Field Goal",
+ifelse(data$posteam[prev.first] == data$posteam[i], "Converted",
+ifelse(data$InterceptionThrown[index] == 1 |
+(data$Fumble[index] == 1 & data$RecFumbTeam[index] != data$posteam[index]), "Turnover",
+ifelse(data$down[i]==0 &
+(data$TimeSecs[i] == 1800|data$TimeSecs[i] == 0), "End Half",
+ifelse(data$down[index] == 4 & data$posteam[index] != data$posteam[i], "Downs", NA))))))
+}
+prev.first = ifelse(data$down[i]==0, NA, ifelse(data$down[i] == 1 &
+!(data$PenalizedTeam[index] == data$posteam[index] & data$down[index]==1), i, prev.first))
+}
+data$PenalizedTeam[which(is.na(data$PenalizedTeam))] = "None"
+data$down = as.numeric(data$down)
+data$down[which(is.na(data$down))] = 0
+downs.outcome = rep(NA, nrow(data))
+downs.yrdline = downs.outcome
+downs.time.elapsed = downs.outcome
+downs.off.td = downs.outcome
+downs.def.td = downs.outcome
+downs.fg = downs.outcome
+prev.first = NA
+for (i in c(2:(nrow(data)))){
+if(i%%10000 == 0){print(i)}
+if(i%%1000 == 1){print(ifelse((data$posteam[prev.first] == data$HomeTeam[index] &
+data$HomeScore[i] - data$HomeScore[index] %in% c(6:8)) |
+(data$posteam[prev.first] == data$AwayTeam &
+data$AwayScore[i] - data$AwayScore[index] %in% c(6:8)), 1, 0))}
+index = i-1
+if(data$down[i]==0 & !is.na(prev.first)){
+downs.time.elapsed[prev.first:index] =
+ifelse(data$GameID[i] != data$GameID[index], data$TimeSecs[prev.first] -
+data$TimeSecs[index], data$TimeSecs[prev.first] - data$TimeSecs[i])
+downs.outcome[prev.first:index] = ifelse(data$PlayType[index] == "Punt", "Punt",
+ifelse(data$PlayType[index] == "Field Goal", "Field Goal",
+ifelse(data$posteam[prev.first] == data$posteam[i], "Converted",
+ifelse(data$InterceptionThrown[index] == 1 |
+(data$Fumble[index] == 1 & data$RecFumbTeam[index] != data$posteam[index]), "Turnover",
+ifelse((data$down[i]==0 &
+(data$TimeSecs[i] == 1800|data$TimeSecs[i] == 0))|
+data$GameID[i] != data$GameID[index], "End Half", NA)))))
+downs.off.td[prev.first:index] =
+ifelse((data$posteam[prev.first] == data$HomeTeam[index] &
+data$HomeScore[i] - data$HomeScore[index] %in% c(6:8)) |
+(data$posteam[prev.first] == data$AwayTeam &
+data$AwayScore[i] - data$AwayScore[index] %in% c(6:8)), 1, 0)
+downs.def.td[prev.first:index] =
+ifelse((data$DefensiveTeam[prev.first] == data$HomeTeam[index] &
+(data$HomeScore[i] - data$HomeScore[index]) %in% c(6:8)) |
+(data$DefensiveTeam[prev.first] == data$AwayTeam &
+(data$AwayScore[i] - data$AwayScore[index] %in% c(6:8))), 1, 0)
+}
+else if(data$down[i] == 1 & !is.na(prev.first) &
+!(data$PenalizedTeam[index] == data$posteam[index] & data$down[index] == 1)){
+downs.time.elapsed[prev.first:index] =
+data$TimeSecs[prev.first] - data$TimeSecs[i]
+downs.outcome[prev.first:index] = ifelse(data$PlayType[index] == "Punt", "Punt",
+ifelse(data$PlayType[index] == "Field Goal", "Field Goal",
+ifelse(data$posteam[prev.first] == data$posteam[i], "Converted",
+ifelse(data$InterceptionThrown[index] == 1 |
+(data$Fumble[index] == 1 & data$RecFumbTeam[index] != data$posteam[index]), "Turnover",
+ifelse(data$down[i]==0 &
+(data$TimeSecs[i] == 1800|data$TimeSecs[i] == 0), "End Half",
+ifelse(data$down[index] == 4 & data$posteam[index] != data$posteam[i], "Downs", NA))))))
+}
+prev.first = ifelse(data$down[i]==0, NA, ifelse(data$down[i] == 1 &
+!(data$PenalizedTeam[index] == data$posteam[index] & data$down[index]==1), i, prev.first))
+}
+data$PenalizedTeam[which(is.na(data$PenalizedTeam))] = "None"
+data$down = as.numeric(data$down)
+data$down[which(is.na(data$down))] = 0
+downs.outcome = rep(NA, nrow(data))
+downs.yrdline = downs.outcome
+downs.time.elapsed = downs.outcome
+downs.off.td = downs.outcome
+downs.def.td = downs.outcome
+downs.fg = downs.outcome
+prev.first = NA
+for (i in c(2:(nrow(data)))){
+if(i%%10000 == 0){print(i)}
+index = i-1
+if(data$down[i]==0 & !is.na(prev.first)){
+downs.time.elapsed[prev.first:index] =
+ifelse(data$GameID[i] != data$GameID[index], data$TimeSecs[prev.first] -
+data$TimeSecs[index], data$TimeSecs[prev.first] - data$TimeSecs[i])
+downs.outcome[prev.first:index] = ifelse(data$PlayType[index] == "Punt", "Punt",
+ifelse(data$PlayType[index] == "Field Goal", "Field Goal",
+ifelse(data$posteam[prev.first] == data$posteam[i], "Converted",
+ifelse(data$InterceptionThrown[index] == 1 |
+(data$Fumble[index] == 1 & data$RecFumbTeam[index] != data$posteam[index]), "Turnover",
+ifelse((data$down[i]==0 &
+(data$TimeSecs[i] == 1800|data$TimeSecs[i] == 0))|
+data$GameID[i] != data$GameID[index], "End Half", NA)))))
+downs.off.td[prev.first:index] =
+ifelse((data$posteam[prev.first] == data$HomeTeam[index] &
+data$HomeScore[i] - data$HomeScore[index] %in% c(6:8)) |
+(data$posteam[prev.first] == data$AwayTeam[index] &
+data$AwayScore[i] - data$AwayScore[index] %in% c(6:8)), 1, 0)
+downs.def.td[prev.first:index] =
+ifelse((data$DefensiveTeam[prev.first] == data$HomeTeam[index] &
+(data$HomeScore[i] - data$HomeScore[index]) %in% c(6:8)) |
+(data$DefensiveTeam[prev.first] == data$AwayTeam[index] &
+(data$AwayScore[i] - data$AwayScore[index] %in% c(6:8))), 1, 0)
+}
+else if(data$down[i] == 1 & !is.na(prev.first) &
+!(data$PenalizedTeam[index] == data$posteam[index] & data$down[index] == 1)){
+downs.time.elapsed[prev.first:index] =
+data$TimeSecs[prev.first] - data$TimeSecs[i]
+downs.outcome[prev.first:index] = ifelse(data$PlayType[index] == "Punt", "Punt",
+ifelse(data$PlayType[index] == "Field Goal", "Field Goal",
+ifelse(data$posteam[prev.first] == data$posteam[i], "Converted",
+ifelse(data$InterceptionThrown[index] == 1 |
+(data$Fumble[index] == 1 & data$RecFumbTeam[index] != data$posteam[index]), "Turnover",
+ifelse(data$down[i]==0 &
+(data$TimeSecs[i] == 1800|data$TimeSecs[i] == 0), "End Half",
+ifelse(data$down[index] == 4 & data$posteam[index] != data$posteam[i], "Downs", NA))))))
+}
+prev.first = ifelse(data$down[i]==0, NA, ifelse(data$down[i] == 1 &
+!(data$PenalizedTeam[index] == data$posteam[index] & data$down[index]==1), i, prev.first))
+}
+data$downs.outcome = downs.outcome
+data$downs.time.elapsed = downs.time.elapsed
+data$downs.off.td = downs.off.td
+data$downs.def.td = downs.def.td
+#remove plays that are messed up
+data = data[-c(65622:65634, 65955, 298819),]
+View(data)
+test = data[1:500,]
+View(test)
+test = data[1:500,c(125:128, 19)]
+View(test)
+test1 = data[1:500,]
+View(test1)
+which(data$posteam == data$DefensiveTeam)
+which(downs.def.td == downs.off.td)
+length(which(downs.def.td == downs.off.td))
+length(which(downs.def.td != downs.off.td))
+data$PenalizedTeam[which(is.na(data$PenalizedTeam))] = "None"
+data$down = as.numeric(data$down)
+data$down[which(is.na(data$down))] = 0
+downs.outcome = rep(NA, nrow(data))
+downs.yrdline = downs.outcome
+downs.time.elapsed = downs.outcome
+downs.off.td = downs.outcome
+downs.def.td = downs.outcome
+downs.fg = downs.outcome
+prev.first = NA
+for (i in c(2:(nrow(data)-340500))){
+if(i%%10000 == 0){print(i)}
+index = i-1
+if(data$down[i]==0 & !is.na(prev.first)){
+downs.time.elapsed[prev.first:index] =
+ifelse(data$GameID[i] != data$GameID[index], data$TimeSecs[prev.first] -
+data$TimeSecs[index], data$TimeSecs[prev.first] - data$TimeSecs[i])
+downs.outcome[prev.first:index] = ifelse(data$PlayType[index] == "Punt", "Punt",
+ifelse(data$PlayType[index] == "Field Goal", "Field Goal",
+ifelse(data$posteam[prev.first] == data$posteam[i], "Converted",
+ifelse(data$InterceptionThrown[index] == 1 |
+(data$Fumble[index] == 1 & data$RecFumbTeam[index] != data$posteam[index]), "Turnover",
+ifelse((data$down[i]==0 &
+(data$TimeSecs[i] == 1800|data$TimeSecs[i] == 0))|
+data$GameID[i] != data$GameID[index], "End Half", NA)))))
+downs.off.td[prev.first:index] =
+ifelse((data$posteam[prev.first] == data$HomeTeam[index] &
+data$HomeScore[i] - data$HomeScore[index] %in% c(6:8)) |
+(data$posteam[prev.first] == data$AwayTeam[index] &
+data$AwayScore[i] - data$AwayScore[index] %in% c(6:8)), 1, 0)
+downs.def.td[prev.first:index] =
+ifelse((data$DefensiveTeam[prev.first] == data$HomeTeam[index] &
+(data$HomeScore[i] - data$HomeScore[index]) %in% c(6:8)) |
+(data$DefensiveTeam[prev.first] == data$AwayTeam[index] &
+(data$AwayScore[i] - data$AwayScore[index] %in% c(6:8))), 1, 0)
+print(i)
+print(prev.first)
+}
+else if(data$down[i] == 1 & !is.na(prev.first) &
+!(data$PenalizedTeam[index] == data$posteam[index] & data$down[index] == 1)){
+downs.time.elapsed[prev.first:index] =
+data$TimeSecs[prev.first] - data$TimeSecs[i]
+downs.outcome[prev.first:index] = ifelse(data$PlayType[index] == "Punt", "Punt",
+ifelse(data$PlayType[index] == "Field Goal", "Field Goal",
+ifelse(data$posteam[prev.first] == data$posteam[i], "Converted",
+ifelse(data$InterceptionThrown[index] == 1 |
+(data$Fumble[index] == 1 & data$RecFumbTeam[index] != data$posteam[index]), "Turnover",
+ifelse(data$down[i]==0 &
+(data$TimeSecs[i] == 1800|data$TimeSecs[i] == 0), "End Half",
+ifelse(data$down[index] == 4 & data$posteam[index] != data$posteam[i], "Downs", NA))))))
+}
+prev.first = ifelse(data$down[i]==0, NA, ifelse(data$down[i] == 1 &
+!(data$PenalizedTeam[index] == data$posteam[index] & data$down[index]==1), i, prev.first))
+}
+data$downs.outcome = downs.outcome
+data$downs.time.elapsed = downs.time.elapsed
+data$downs.off.td = downs.off.td
+data$downs.def.td = downs.def.td
+#remove plays that are messed up
+data = data[-c(65622:65634, 65955, 298819),]
+i = 54
+index = 53
+prev.first = 50
+ifelse((data$posteam[prev.first] == data$HomeTeam[index] &
+data$HomeScore[i] - data$HomeScore[index] %in% c(6:8)) |
+(data$posteam[prev.first] == data$AwayTeam[index] &
+data$AwayScore[i] - data$AwayScore[index] %in% c(6:8)), 1, 0)
+data$HomeScore[i] - data$HomeScore[index] %in% c(6:8))
+data$HomeScore[i] - data$HomeScore[index] %in% c(6:8)
+data = readRDS (file = "cleaned-data-part-2.Rda")
+indices = readRDS(file = "indices.Rda")
+data = data %>% filter(!(str_detect(data$desc, "END QUARTER 1") |
+str_detect(data$desc, "END QUARTER 3")))
+data$TimeSecs[26804] = 2700
+data$qtr[8721:8728] = 4
+data$TimeSecs[8721:8728] = data$TimeSecs[8721:8728]- 900
+data$qtr[178371] = 4
+data$TimeSecs[178371] = data$TimeSecs[178371]- 900
+data$qtr[182346:182349] = 2
+data$TimeSecs[182346:182349] = data$TimeSecs[182346:182349]- 900
+data$qtr[213542:213543] = 2
+data$TimeSecs[213542:213543] = data$TimeSecs[213542:213543]- 900
+data$qtr[290927] = 1
+data$TimeSecs[290927] = data$TimeSecs[290927]+900
+data$TimeSecs[302494:302499] = data$TimeSecs[302494:302499]+300
+#weird time issues in bears vikings
+avg.play.time = round((data$TimeSecs[195039] - data$TimeSecs[195051])/12)
+for(i in c(1:11)){
+data$TimeSecs[(195039+i)] = 1800 - avg.play.time*i
+}
+avg.play.time = round((data$TimeSecs[195052] - data$TimeSecs[195056])/5)
+for(i in c(1:4)){
+data$TimeSecs[(195051+i)] = 1429 - avg.play.time*i
+}
+avg.play.time = round((data$TimeSecs[195059] - data$TimeSecs[195065])/7)
+for(i in c(1:6)){
+data$TimeSecs[(195058+i)] = 1329 - avg.play.time*i
+}
+test = data[1:500,c(125:128,19)]
+data$PenalizedTeam[which(is.na(data$PenalizedTeam))] = "None"
+data$down = as.numeric(data$down)
+data$down[which(is.na(data$down))] = 0
+downs.outcome = rep(NA, nrow(data))
+downs.yrdline = downs.outcome
+downs.time.elapsed = downs.outcome
+downs.off.td = downs.outcome
+downs.def.td = downs.outcome
+downs.fg = downs.outcome
+prev.first = NA
+for (i in c(2:(nrow(data)-340500))){
+if(i%%10000 == 0){print(i)}
+index = i-1
+if(data$down[i]==0 & !is.na(prev.first)){
+downs.time.elapsed[prev.first:index] =
+ifelse(data$GameID[i] != data$GameID[index], data$TimeSecs[prev.first] -
+data$TimeSecs[index], data$TimeSecs[prev.first] - data$TimeSecs[i])
+downs.outcome[prev.first:index] = ifelse(data$PlayType[index] == "Punt", "Punt",
+ifelse(data$PlayType[index] == "Field Goal", "Field Goal",
+ifelse(data$posteam[prev.first] == data$posteam[i], "Converted",
+ifelse(data$InterceptionThrown[index] == 1 |
+(data$Fumble[index] == 1 & data$RecFumbTeam[index] != data$posteam[index]), "Turnover",
+ifelse((data$down[i]==0 &
+(data$TimeSecs[i] == 1800|data$TimeSecs[i] == 0))|
+data$GameID[i] != data$GameID[index], "End Half", NA)))))
+downs.off.td[prev.first:index] =
+ifelse((data$posteam[prev.first] == data$HomeTeam[index] &
+((data$HomeScore[i] - data$HomeScore[index]) %in% c(6:8))) |
+(data$posteam[prev.first] == data$AwayTeam[index] &
+((data$AwayScore[i] - data$AwayScore[index]) %in% c(6:8))), 1, 0)
+downs.def.td[prev.first:index] =
+ifelse((data$DefensiveTeam[prev.first] == data$HomeTeam[index] &
+((data$HomeScore[i] - data$HomeScore[index]) %in% c(6:8))) |
+(data$DefensiveTeam[prev.first] == data$AwayTeam[index] &
+((data$AwayScore[i] - data$AwayScore[index]) %in% c(6:8))), 1, 0)
+print(i)
+print(prev.first)
+}
+else if(data$down[i] == 1 & !is.na(prev.first) &
+!(data$PenalizedTeam[index] == data$posteam[index] & data$down[index] == 1)){
+downs.time.elapsed[prev.first:index] =
+data$TimeSecs[prev.first] - data$TimeSecs[i]
+downs.outcome[prev.first:index] = ifelse(data$PlayType[index] == "Punt", "Punt",
+ifelse(data$PlayType[index] == "Field Goal", "Field Goal",
+ifelse(data$posteam[prev.first] == data$posteam[i], "Converted",
+ifelse(data$InterceptionThrown[index] == 1 |
+(data$Fumble[index] == 1 & data$RecFumbTeam[index] != data$posteam[index]), "Turnover",
+ifelse(data$down[i]==0 &
+(data$TimeSecs[i] == 1800|data$TimeSecs[i] == 0), "End Half",
+ifelse(data$down[index] == 4 & data$posteam[index] != data$posteam[i], "Downs", NA))))))
+}
+prev.first = ifelse(data$down[i]==0, NA, ifelse(data$down[i] == 1 &
+!(data$PenalizedTeam[index] == data$posteam[index] & data$down[index]==1), i, prev.first))
+}
+data$downs.outcome = downs.outcome
+data$downs.time.elapsed = downs.time.elapsed
+data$downs.off.td = downs.off.td
+data$downs.def.td = downs.def.td
+#remove plays that are messed up
+data = data[-c(65622:65634, 65955, 298819),]
+test = data[1:500, c(125:128,19)]
+View(test)
+which(colnames(data) == "Touchdown")
+test = data[1:500, c(125:128,23,19)]
+View(test)
+data = readRDS (file = "cleaned-data-part-2.Rda")
+indices = readRDS(file = "indices.Rda")
+data = data %>% filter(!(str_detect(data$desc, "END QUARTER 1") |
+str_detect(data$desc, "END QUARTER 3")))
+data$TimeSecs[26804] = 2700
+data$qtr[8721:8728] = 4
+data$TimeSecs[8721:8728] = data$TimeSecs[8721:8728]- 900
+data$qtr[178371] = 4
+data$TimeSecs[178371] = data$TimeSecs[178371]- 900
+data$qtr[182346:182349] = 2
+data$TimeSecs[182346:182349] = data$TimeSecs[182346:182349]- 900
+data$qtr[213542:213543] = 2
+data$TimeSecs[213542:213543] = data$TimeSecs[213542:213543]- 900
+data$qtr[290927] = 1
+data$TimeSecs[290927] = data$TimeSecs[290927]+900
+data$TimeSecs[302494:302499] = data$TimeSecs[302494:302499]+300
+#weird time issues in bears vikings
+avg.play.time = round((data$TimeSecs[195039] - data$TimeSecs[195051])/12)
+for(i in c(1:11)){
+data$TimeSecs[(195039+i)] = 1800 - avg.play.time*i
+}
+avg.play.time = round((data$TimeSecs[195052] - data$TimeSecs[195056])/5)
+for(i in c(1:4)){
+data$TimeSecs[(195051+i)] = 1429 - avg.play.time*i
+}
+avg.play.time = round((data$TimeSecs[195059] - data$TimeSecs[195065])/7)
+for(i in c(1:6)){
+data$TimeSecs[(195058+i)] = 1329 - avg.play.time*i
+}
+data$PenalizedTeam[which(is.na(data$PenalizedTeam))] = "None"
+data$down = as.numeric(data$down)
+data$down[which(is.na(data$down))] = 0
+downs.outcome = rep(NA, nrow(data))
+downs.yrdline = downs.outcome
+downs.time.elapsed = downs.outcome
+downs.off.td = downs.outcome
+downs.def.td = downs.outcome
+downs.fg = downs.outcome
+prev.first = NA
+for (i in c(2:(nrow(data)))){
+if(i%%10000 == 0){print(i)}
+index = i-1
+if(data$down[i]==0 & !is.na(prev.first)){
+downs.time.elapsed[prev.first:index] =
+ifelse(data$GameID[i] != data$GameID[index], data$TimeSecs[prev.first] -
+data$TimeSecs[index], data$TimeSecs[prev.first] - data$TimeSecs[i])
+downs.outcome[prev.first:index] = ifelse(data$PlayType[index] == "Punt", "Punt",
+ifelse(data$PlayType[index] == "Field Goal", "Field Goal",
+ifelse(data$posteam[prev.first] == data$posteam[i], "Converted",
+ifelse(data$InterceptionThrown[index] == 1 |
+(data$Fumble[index] == 1 & data$RecFumbTeam[index] != data$posteam[index]), "Turnover",
+ifelse((data$down[i]==0 &
+(data$TimeSecs[i] == 1800|data$TimeSecs[i] == 0))|
+data$GameID[i] != data$GameID[index], "End Half", NA)))))
+downs.off.td[prev.first:index] =
+ifelse((data$posteam[prev.first] == data$HomeTeam[index] &
+((data$HomeScore[i] - data$HomeScore[index]) %in% c(6:8))) |
+(data$posteam[prev.first] == data$AwayTeam[index] &
+((data$AwayScore[i] - data$AwayScore[index]) %in% c(6:8))), 1, 0)
+downs.def.td[prev.first:index] =
+ifelse((data$DefensiveTeam[prev.first] == data$HomeTeam[index] &
+((data$HomeScore[i] - data$HomeScore[index]) %in% c(6:8))) |
+(data$DefensiveTeam[prev.first] == data$AwayTeam[index] &
+((data$AwayScore[i] - data$AwayScore[index]) %in% c(6:8))), 1, 0)
+print(i)
+print(prev.first)
+}
+else if(data$down[i] == 1 & !is.na(prev.first) &
+!(data$PenalizedTeam[index] == data$posteam[index] & data$down[index] == 1)){
+downs.time.elapsed[prev.first:index] =
+data$TimeSecs[prev.first] - data$TimeSecs[i]
+downs.outcome[prev.first:index] = ifelse(data$PlayType[index] == "Punt", "Punt",
+ifelse(data$PlayType[index] == "Field Goal", "Field Goal",
+ifelse(data$posteam[prev.first] == data$posteam[i], "Converted",
+ifelse(data$InterceptionThrown[index] == 1 |
+(data$Fumble[index] == 1 & data$RecFumbTeam[index] != data$posteam[index]), "Turnover",
+ifelse(data$down[i]==0 &
+(data$TimeSecs[i] == 1800|data$TimeSecs[i] == 0), "End Half",
+ifelse(data$down[index] == 4 & data$posteam[index] != data$posteam[i], "Downs", NA))))))
+}
+prev.first = ifelse(data$down[i]==0, NA, ifelse(data$down[i] == 1 &
+!(data$PenalizedTeam[index] == data$posteam[index] & data$down[index]==1), i, prev.first))
+}
+data$downs.outcome = downs.outcome
+data$downs.time.elapsed = downs.time.elapsed
+data$downs.off.td = downs.off.td
+data$downs.def.td = downs.def.td
+#remove plays that are messed up
+data = data[-c(65622:65634, 65955, 298819),]
+which(data$Touchdown == 1 & data$downs.off.td+data$downs.def.td!=1)
+test = data[which(data$Touchdown == 1 & data$downs.off.td+data$downs.def.td!=1), c(125:128, 23, 19)]
+View(test)
+data$ChalReplayResult[1:500]
+not.incremented.tds = which(data$Touchdown == 1 & data$downs.off.td+data$downs.def.td!=1 &
+data$ChalReplayResult != "Reversed")
+test = data[not.incremented.tds, c(125:128, 23, 19)]
+View(test)
+not.incremented.tds = which(data$Touchdown == 1 & data$downs.off.td+data$downs.def.td!=1)
+test = data[not.incremented.tds, c(125:128, 23, 19)]
+not.incremented.tds
+test1 = data[469:471,]
+View(test1)
+not.incremented.tds = which(data$Touchdown == 1 & data$downs.off.td+data$downs.def.td!=1 &
+(is.na(data$ChalReplayResult) | data$ChalReplayResult == "Upheld"))
+test = data[not.incremented.tds, c(125:128, 23, 19)]
+View(test1)

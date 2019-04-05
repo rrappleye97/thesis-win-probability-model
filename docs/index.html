@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html >
+
+<head>
+
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Modeling Win Probability in NFL Games</title>
+  <meta name="description" content="Modeling Win Probability in NFL Games">
+  <meta name="generator" content="bookdown  and GitBook 2.6.7">
+
+  <meta property="og:title" content="Modeling Win Probability in NFL Games" />
+  <meta property="og:type" content="book" />
+  
+  
+  
+  
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Modeling Win Probability in NFL Games" />
+  
+  
+  
+
+<meta name="author" content="Robert Rappleye">
+
+
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  
+  
+
+<link rel="next" href="literature-review.html">
+<script src="libs/jquery-2.2.3/jquery.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+
+
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li><a href="./"></a></li>
+<li class="divider"></li>
+<li class="chapter" data-level="" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i>Introduction</a></li>
+<li class="chapter" data-level="" data-path="literature-review.html"><a href="literature-review.html"><i class="fa fa-check"></i>Literature Review</a></li>
+<li class="chapter" data-level="1" data-path="1-data.html"><a href="1-data.html"><i class="fa fa-check"></i><b>1</b> Data</a></li>
+<li class="chapter" data-level="2" data-path="2-methodology.html"><a href="2-methodology.html"><i class="fa fa-check"></i><b>2</b> Methodology</a><ul>
+<li class="chapter" data-level="2.1" data-path="2-methodology.html"><a href="2-methodology.html#modeling-win-probability-on-kickoffs-and-point-after-attempts"><i class="fa fa-check"></i><b>2.1</b> Modeling Win Probability on Kickoffs and Point After Attempts</a></li>
+<li class="chapter" data-level="2.2" data-path="2-methodology.html"><a href="2-methodology.html#modeling-win-probability-on-first-and-ten"><i class="fa fa-check"></i><b>2.2</b> Modeling Win Probability on First and Ten</a></li>
+<li class="chapter" data-level="2.3" data-path="2-methodology.html"><a href="2-methodology.html#modeling-win-probability-in-other-scenarios"><i class="fa fa-check"></i><b>2.3</b> Modeling Win Probability in Other Scenarios</a></li>
+<li class="chapter" data-level="2.4" data-path="2-methodology.html"><a href="2-methodology.html#reasoning-behind-modeling-methodology"><i class="fa fa-check"></i><b>2.4</b> Reasoning Behind Modeling Methodology</a></li>
+</ul></li>
+<li class="chapter" data-level="3" data-path="3-results.html"><a href="3-results.html"><i class="fa fa-check"></i><b>3</b> Results</a></li>
+<li class="chapter" data-level="4" data-path="4-applications.html"><a href="4-applications.html"><i class="fa fa-check"></i><b>4</b> Applications</a></li>
+<li class="chapter" data-level="5" data-path="5-discussion.html"><a href="5-discussion.html"><i class="fa fa-check"></i><b>5</b> Discussion</a><ul>
+<li class="chapter" data-level="5.1" data-path="5-discussion.html"><a href="5-discussion.html#conclusion"><i class="fa fa-check"></i><b>5.1</b> Conclusion</a></li>
+</ul></li>
+<li class="appendix"><span><b>Appendix</b></span></li>
+<li class="chapter" data-level="A" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html"><i class="fa fa-check"></i><b>A</b> The First Appendix</a><ul>
+<li class="chapter" data-level="A.1" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html#point-chart"><i class="fa fa-check"></i><b>A.1</b> 2 point chart</a></li>
+<li class="chapter" data-level="A.2" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html#clock-stop-gbm-to-predict-p_stop_g_k"><i class="fa fa-check"></i><b>A.2</b> Clock Stop GBM to Predict <span class="math inline">\(p_{stop_{G_k}}\)</span></a></li>
+<li class="chapter" data-level="A.3" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html#downs-outcome-formulas"><i class="fa fa-check"></i><b>A.3</b> Downs outcome formulas</a></li>
+<li class="chapter" data-level="A.4" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html#gbm-for-p_penaltyreplay"><i class="fa fa-check"></i><b>A.4</b> GBM for <span class="math inline">\(P_{penaltyReplay}\)</span></a></li>
+<li class="chapter" data-level="A.5" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html#gbms-for-p_score"><i class="fa fa-check"></i><b>A.5</b> GBMs for <span class="math inline">\(P_{score}\)</span></a></li>
+<li class="chapter" data-level="A.6" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html#linear-models-for-delta-field-position-outcome_g_k"><i class="fa fa-check"></i><b>A.6</b> Linear Models for <span class="math inline">\(\Delta field position | outcome_{g_k}\)</span></a></li>
+</ul></li>
+<li class="chapter" data-level="" data-path="references.html"><a href="references.html"><i class="fa fa-check"></i>References</a></li>
+<li class="divider"></li>
+<li><a href="https://github.com/rstudio/bookdown" target="blank">Published with bookdown</a></li>
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">Modeling Win Probability in NFL Games</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="header">
+<h1 class="title">Modeling Win Probability in NFL Games</h1>
+<p class="author"><em>Robert Rappleye</em></p>
+<p class="date"><em>May 2019</em></p>
+</div>
+<div id="introduction" class="section level1 unnumbered">
+<h1>Introduction</h1>
+<p>Predicting the winner of a given National Football League (NFL) game has long been of interest to fans, pundits and gamblers alike. Many factors can influence the outcome of game. Some more obvious factors might include the current score differential, the amount of time left, the down and distance to go to pick up a first down, the current yard line, and the strength of each team’s offensive, defensive and special teams units. Some less obvious factors might include the number of timeouts each team has left, the stadium in which the teams are playing, the weather, which team will receive the second half kickoff, and the in-game decision making capabilities of the respective coaches.</p>
+<p>Others have developed in-game win probability models using some of these factors. Lock &amp; Nettleton (2014) used a Random Forest that takes in a number of variables aimed at describing the current game state<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a>, a variable—total points scored—that might offer insight into the level of variance associated with the game environment, and the pre-game point spread as a measure of relative team strengths and outputs the probability the team with possession of the football will win the game. Pro-Football-Reference (PFR) has published an in-game win probability model that expands on previous research by Hal Stern and Wayne Winston and treats the change in score from a given point until the end of the game as a normal distribution and calculates win probability by finding the proportion of the normal probability density function that corresponds to a final score differential that is greater than zero. A different unspecified model is used for game states where less than five minutes remain. The mean of the PFR normal distribution is taken to be the current score differential plus the expected points added (EPA), a feature designed by PFR to find the value of a given combination of down, distance to first down, yard line and time remaining in the half, and the variance is taken to be 13.45<a href="#fn2" class="footnote-ref" id="fnref2"><sup>2</sup></a> multiplied by the fraction of game time that remains (PFR cite). Maksim Horowitz, Samuel Ventura and Ronald Yurko developed a win probability model (and the wonderful nflscrapR package that was used to load in the play by play data used in this analysis) that uses a multinomial logistic regression to evaluate the value of field position and a Generalized Additive Model (GAM) to output a win probability. ESPN also boasts a win probability model. I was not able to find a description of ESPN’s methods on its site, but in 2017 Michael Lopez, then an assistant professor at Skidmore College, now the NFL’s Director of Data and Analytics, described the model as “derived from an ensemble of machine learning models” (statsbylopez cite).</p>
+<p>Unfortunately, of these models, only the results from the model developed by Horowitz, Ventura and Yurko (2018) are available online, though Lock and Nettleton (2014) give a summary of their model’s effectiveness when tested on the 2013 NFL season (and they shared the results of an updated model for games during the 2017 season to allow for a comparison with the results of this analysis). This makes it difficult to evaluate of the effectiveness of different methods or set a benchmark for what level of performance constitutes an effective model.</p>
+<p>The aim of this work is to create a win probability model that improves upon shortcomings in existing models. Some models—Lock and Nettleton (2014), seemingly ESPN—draw upon ensemble learning methods that allow for nonlinear modeling of complex interactions, while Horowitz, Ventura and Yurko (2018) use a GAM to a similar end. Others, like PFR, draw upon the link between change in score differential and the normal distribution to enable sampling from a known probability density function that allows for an easy transformation to win probability space. However, no model has advertised itself as doing both<a href="#fn3" class="footnote-ref" id="fnref3"><sup>3</sup></a>, a modeling process that could manifest itself in the form of modeling more granular events—the probability distribution for the outcome of a set of downs or the next scoring event, for example—in a nonlinear manner, drawing from a probability distribution that models these events and feeding the result to a normal distribution. The process of Horowitz, Ventura, and Yurko (2018) is most similar, but they substitute a GAM for a normal distribution and feed the expectation of the value of the current game state to the GAM instead of feeding it samples from the distribution of future game states that might exist. Additionally, though some models may implicitly account for the possibility that games featuring different game states may feature different variances even when time remaining is held equal, no existing model appears to account for differences in variance that occur because due to differences in the types of teams playing in one game versus another. The intuition behind this is that all else held equal, a game between two high-powered offenses would seem to feature greater variance at various points than one between two high powered defenses. It also stands to reason that if the sigma parameter is assumed to depend on the game state and aspects of team make-up, then the mu parameter might also. In short, this paper seeks both to flesh out some of the nuances in team composition that might affect win probability and to measure the effect of certain variables—mainly those related to field position and down and distance—indirectly through the effect that different distributions of future game states have on win probability.</p>
+
+</div>
+<div class="footnotes">
+<hr />
+<ol start="1">
+<li id="fn1"><p>They used down, yards to go for a first down, yard line, score differential, seconds remaining, timeouts remaining for each team, and adjusted score—score divided by the square root of seconds remaining + 1—to describe the current game state<a href="index.html#fnref1" class="footnote-back">↩</a></p></li>
+<li id="fn2"><p>The variance of the final score from the pre-game point spread over all NFL games from 1978-2012<a href="index.html#fnref2" class="footnote-back">↩</a></p></li>
+<li id="fn3"><p>Although the lack of transparency exhibited by many of these models mean that it is possible some are utilizing some version of the process described<a href="index.html#fnref3" class="footnote-back">↩</a></p></li>
+</ol>
+</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+
+<a href="literature-review.html" class="navigation navigation-next navigation-unique" aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/lunr.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+"sharing": {
+"github": false,
+"facebook": true,
+"twitter": true,
+"google": false,
+"linkedin": false,
+"weibo": false,
+"instapaper": false,
+"vk": false,
+"all": ["facebook", "google", "twitter", "linkedin", "weibo", "instapaper"]
+},
+"fontsettings": {
+"theme": "white",
+"family": "sans",
+"size": 2
+},
+"edit": {
+"link": null,
+"text": null
+},
+"history": {
+"link": null,
+"text": null
+},
+"download": [["thesis.pdf", "PDF"], ["thesis.epub", "EPUB"], ["thesis.docx", "Word"]],
+"toc": {
+"collapse": "section"
+}
+});
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    var src = "true";
+    if (src === "" || src === "true") src = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML";
+    if (location.protocol !== "file:" && /^https?:/.test(src))
+      src = src.replace(/^https?:/, '');
+    script.src = src;
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+</body>
+
+</html>

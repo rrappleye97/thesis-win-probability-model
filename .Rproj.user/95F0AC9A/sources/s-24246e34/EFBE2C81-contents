@@ -1,0 +1,91 @@
+---
+author: 'Robert Rappleye'
+date: 'May 2019'
+institution: 'Duke University'
+division: 'Trinity College of Arts and Sciences'
+advisor: 'Sayan Mukherjee'
+#altadvisor: 'Your Other Advisor'
+# Delete line 7 if you only have one advisor
+committeememberone: 'Alan Gelfand'
+committeemembertwo: 'Amy Herring'
+dus: 'Dus X. Name'
+department: 'Department of Statistical Science'
+degree: 'Bachelor of Science in Statistical Science'
+title: 'Modeling Win Probability in NFL Games'
+knit: "bookdown::render_book"
+site: bookdown::bookdown_site
+output: 
+#  thesisdowndss::thesis_pdf: default
+  thesisdowndss::thesis_gitbook: default
+#  thesisdowndss::thesis_word: default
+#  thesisdowndss::thesis_epub: default
+# If you are creating a PDF you'll need to write your preliminary content here or
+# use code similar to line 20 for the files.  If you are producing in a different
+# format than PDF, you can delete or ignore lines 20-31 in this YAML header.
+abstract: |
+  `r if(knitr:::is_latex_output()) paste(readLines("00-abstract.Rmd"), collapse = '\n  ')`
+# If you'd rather include the preliminary content in files instead of inline
+# like below, use a command like that for the abstract above.  Note that a tab is 
+# needed on the line after the |.
+acknowledgements: |
+  I want to thank a few people.
+dedication: |
+  You can have a dedication here if you wish. 
+preface: |
+  This is an example of a thesis setup to use the reed thesis document class
+  (for LaTeX) and the R bookdown package, in general.
+bibliography: bib/thesis.bib
+# Refer to your specific bibliography file in the line above.
+csl: csl/apa.csl
+# Download your specific csl file and refer to it in the line above.
+lot: true
+lof: true
+#space_between_paragraphs: true
+# Delete the # at the beginning of the previous line if you'd like
+# to have a blank new line between each paragraph
+#header-includes:
+#- \usepackage{tikz}
+---
+
+<!--
+Above is the YAML (YAML Ain't Markup Language) header that includes a lot of metadata used to produce the document.  Be careful with spacing in this header!
+
+If you'd prefer to not include a Dedication, for example, simply delete lines 17 and 18 above or add a # before them to comment them out.  If you have other LaTeX packages you would like to include, delete the # before header-includes and list the packages after hyphens on new lines.
+
+If you'd like to include a comment that won't be produced in your resulting file enclose it in a block like this.
+-->
+
+<!--
+If you receive a duplicate label error after knitting, make sure to delete the index.Rmd file and then knit again.
+-->
+
+```{r include_packages, include = FALSE}
+# This chunk ensures that the thesisdowndss package is
+# installed and loaded. This thesisdowndss package includes
+# the template files for the thesis.
+if(!require(devtools))
+  install.packages("devtools", repos = "http://cran.rstudio.com")
+if(!require(thesisdowndss))
+  devtools::install_github("mine-cetinkaya-rundel/thesisdowndss")
+library(thesisdowndss)
+```
+
+<!-- You'll need to include the order that you'd like Rmd files to appear in the _bookdown.yml file for
+PDF files and also delete the # before rmd_files: there.  You'll want to not include 00(two-hyphens)prelim.Rmd
+and 00-abstract.Rmd since they are handled in the YAML above differently for the PDF version.
+-->
+
+<!-- The {.unnumbered} option here means that the introduction will be "Chapter 0." You can also use {-} for no numbers
+on chapters.
+-->
+
+# Introduction {.unnumbered}
+
+Predicting the winner of a given National Football League (NFL) game has long been of interest to fans, pundits and gamblers alike. Many factors can influence the outcome of game. Some more obvious factors might include the current score differential, the amount of time left, the down and distance to go to pick up a first down, the current yard line, and the strength of each team’s offensive, defensive and special teams units. Some less obvious factors might include the number of timeouts each team has left, the stadium in which the teams are playing, the weather, which team will receive the second half kickoff, and the in-game decision making capabilities of the respective coaches. 
+
+Others have developed in-game win probability models using some of these factors. Lock & Nettleton (2014) used a Random Forest that takes in a number of variables aimed at describing the current game state^[They used down, yards to go for a first down, yard line, score differential, seconds remaining, timeouts remaining for each team, and adjusted score—score divided by the square root of seconds remaining + 1—to describe the current game state], a variable—total points scored—that might offer insight into the level of variance associated with the game environment, and the pre-game point spread as a measure of relative team strengths and outputs the probability the team with possession of the football will win the game. Pro-Football-Reference (PFR) has published an in-game win probability model that expands on previous research by Hal Stern and Wayne Winston and treats the change in score from a given point until the end of the game as a normal distribution and calculates win probability by finding the proportion of the normal probability density function that corresponds to a final score differential that is greater than zero. A different unspecified model is used for game states where less than five minutes remain. The mean of the PFR normal distribution is taken to be the current score differential plus the expected points added (EPA), a feature designed by PFR to find the value of a given combination of down, distance to first down, yard line and time remaining in the half, and the variance is taken to be 13.45^[The variance of the final score from the pre-game point spread over all NFL games from 1978-2012] multiplied by the fraction of game time that remains (PFR cite). Maksim Horowitz, Samuel Ventura and Ronald Yurko developed a win probability model (and the wonderful nflscrapR package that was used to load in the play by play data used in this analysis) that uses a multinomial logistic regression to evaluate the value of field position and a Generalized Additive Model (GAM) to output a win probability. ESPN also boasts a win probability model. I was not able to find a description of ESPN’s methods on its site, but in 2017 Michael Lopez, then an assistant professor at Skidmore College, now the NFL’s Director of Data and Analytics, described the model as “derived from an ensemble of machine learning models” (statsbylopez cite). 
+
+Unfortunately, of these models, only the results from the model developed by Horowitz, Ventura and Yurko (2018) are available online, though Lock and Nettleton (2014) give a summary of their model’s effectiveness when tested on the 2013 NFL season (and they shared the results of an updated model for games during the 2017 season to allow for a comparison with the results of this analysis). This makes it difficult to evaluate of the effectiveness of different methods or set a benchmark for what level of performance constitutes an effective model. 
+
+The aim of this work is to create a win probability model that improves upon shortcomings in existing models. Some models—Lock and Nettleton (2014), seemingly ESPN—draw upon ensemble learning methods that allow for nonlinear modeling of complex interactions, while Horowitz, Ventura and Yurko (2018) use a GAM to a similar end. Others, like PFR, draw upon the link between change in score differential and the normal distribution to enable sampling from a known probability density function that allows for an easy transformation to win probability space. However, no model has advertised itself as doing both^[Although the lack of transparency exhibited by many of these models mean that it is possible some are utilizing some version of the process described], a modeling process that could manifest itself in the form of modeling more granular events—the probability distribution for the outcome of a set of downs or the next scoring event, for example—in a nonlinear manner, drawing from a probability distribution that models these events and feeding the result to a normal distribution. The process of Horowitz, Ventura, and Yurko (2018) is most similar, but they substitute a GAM for a normal distribution and feed the expectation of the value of the current game state to the GAM instead of feeding it samples from the distribution of future game states that might exist. Additionally, though some models may implicitly account for the possibility that games featuring different game states may feature different variances even when time remaining is held equal, no existing model appears to account for differences in variance that occur because due to differences in the types of teams playing in one game versus another. The intuition behind this is that all else held equal, a game between two high-powered offenses would seem to feature greater variance at various points than one between two high powered defenses. It also stands to reason that if the sigma parameter is assumed to depend on the game state and aspects of team make-up, then the mu parameter might also. In short, this paper seeks both to flesh out some of the nuances in team composition that might affect win probability and to measure the effect of certain variables—mainly those related to field position and down and distance—indirectly through the effect that different distributions of future game states have on win probability.
+

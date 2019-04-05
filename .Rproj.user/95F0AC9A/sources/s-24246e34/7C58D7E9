@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1554423166617.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2480969498",
+    "id" : "7C58D7E9",
+    "lastKnownWriteTime" : 1554421554,
+    "last_content_update" : 1554421554,
+    "path" : "~/thesis-win-probability-model/index/00-abstract.Rmd",
+    "project_path" : "index/00-abstract.Rmd",
+    "properties" : {
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}
