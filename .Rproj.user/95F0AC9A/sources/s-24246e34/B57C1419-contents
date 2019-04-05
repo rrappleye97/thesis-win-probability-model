@@ -19,8 +19,9 @@ Though the play-by-play dataset has everything I need as far as describing the g
 data = readRDS(file = "/home/guest/thesis-sp19-rappleye-nfl_calculator/data.win.train.Rda")
 output = data[seq(101, 501, by = 100), which(colnames(data) %in% c("home.o.dvoa", "home.d.dvoa", "away.o.dvoa", "away.d.dvoa", "vegas.line", "home.grade", "away.grade"))]
 for(i in c(1:7)){
-  outpit[,i] = round(output[,i], 1)
+  output[,i] = round(output[,i], 1)
 }
+colnames(output) = c("Point Spread", "QB Home", "QB Away", "Off DVOA Home", "Off DVOA Away", "Def DVOA Home", "Def DVOA Away")
 kable(output, 
       caption = "Sample Use of Outside Data",
       longtable = TRUE,

@@ -79,27 +79,26 @@ A GBM fit with the same variables as above but trained only on overtime data is 
 **Extra Points**  
 For extra points the process only involves the additional step of sampling $n$ outcomes for the extra point or two point conversion try^[A chart defining situations where a team is classified as going for two is listed in the appendix] and passing each resulting game state $i*$ to the model that predicts win probability to find:
 
-$WinProb_i = \frac{1}{n} \sum_{k=1}^nWinProb_{i*}$
-$WinProb_i*$ is:  
+$WinProb_i = \frac{1}{n} \sum_{k=1}^nWinProb_{i*}$, where $WinProb_i*$ =    
 
-  $CDF^{-1}(\frac{\mu_{i*} + s_{curr_{i*}}}{\sigma_{i*}})$ if $t_{i*} > 600$,  
-  $GBM_{4th}(i*)$ if $0 <t_{i*} <= 600$, and   
+  $CDF^{-1}(\frac{\mu_{i*} + s_{curr_{i*}}}{\sigma^{2}_{i*}})$ if $t_{i*} > 600$,  
+  $GBM_{4th}(i*)$ if $0 <t_{i*} \leq 600$, and   
   $GBM_{ot}(i*)$ if $t_{i*} < 0$  
 
 ## Modeling Win Probability on First and Ten
-When the game state features a first and ten we must take $n$ samples of the pair (next scoring event, time elapsed) where, just as in Horowitz, Ventura, and Yurko (2018) the seven possible outcomes for the next scoring event include a touchdown, field goal, or safety for either team and no scoring events before the end of the half. As is done by Horowitz, Ventura and Yurko (2018), the next scoring event is modeled by a multinomial logistic regression, though this work uses the Brian Ripley’s “nnet” package to implement a multinomial logistic regression instead of comparing a set of binary logistic regressions with a chosen baseline event. Modeling end of half, end of game, and overtime situations separately gave the most robust performance by LMRSO CV. The formulas for some of the linear models are the same, but each model was trained only on data within the time window where it would be applied. A multinomial GBM model was also considered. For a given initial game state $i$ we find the log odds for each possible outcome $x$ of being the next scoring event $\delta_x$ as compared to a baseline outcome:^[is it obvious that the parameters for the specified models are all different? i.e. that one $\beta_{xint} !=$ another $\beta_{xint}$. Is this notation okay?]
+When the game state features a first and ten we must take $n$ samples of the pair (next scoring event, time elapsed) where, just as in Horowitz, Ventura, and Yurko (2018) the seven possible outcomes for the next scoring event include a touchdown, field goal, or safety for either team and no scoring events before the end of the half. As is done by Horowitz, Ventura and Yurko (2018), the next scoring event is modeled by a multinomial logistic regression, though this work uses the Brian Ripley’s “nnet” package to implement a multinomial logistic regression instead of comparing a set of binary logistic regressions with a chosen baseline event. Modeling end of half, end of game, and overtime situations separately gave the most robust performance by LMRSO CV. The formulas for some of the linear models are the same, but each model was trained only on data within the time window where it would be applied. A multinomial GBM model was also considered. For a given initial game state $i$ we find the log odds for each possible outcome $x$ of being the next scoring event $\delta_x$ as compared to the outcome the algorithm chooses as the baseline^[A conversion in this case]:
 
 $\delta_{ix} = \beta_{intx} + \beta_{xpos_o}{pos_o}_{i} + \beta_{xde\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{xpos_d}{pos_d}_i + \beta_{xde\hspace{-0.1em}f_d}{de\hspace{-0.1em}f_d}_i + \beta_{xpos_{st}}{pos_{st}}_i + \:$  
-$\beta_{xde\hspace{-0.1em}f_{st}}{de\hspace{-0.1em}f_{st}}_i + \beta_{xt_{adjH}}t_{adjH_i} + \beta_{xc_{score}}c_{score_i} + \beta_{xyrd}yrd_i$ if $t > 300 \: \& \: 1800 < t <= 1980$,  
+$\beta_{xde\hspace{-0.1em}f_{st}}{de\hspace{-0.1em}f_{st}}_i + \beta_{xt_{adjH}}t_{adjH_i} + \beta_{xc_{score}}c_{score_i} + \beta_{xyrd}yrd_i$ if $t_i > 300 \:\: \& \:\: 1800 < t_i \leq 1980$,  
 
 $\delta_{ix} = \beta_{xint} + \beta_{xpos_o}{pos_o}_i + \beta_{xde\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{xpos_d}{pos_d}_i + \beta_{xde\hspace{-0.1em}f_d}{de\hspace{-0.1em}f_d}_i + \beta_{xpos_{st}}{pos_{st}}_i + \:$  
-$\beta_{xde\hspace{-0.1em}f_{st}}{de\hspace{-0.1em}f_{st}}_i + \beta_{xt_{adjH}}t_{adjH_i} + \beta_{xc_{score}}c_{score_i} + \beta_{xyrd}yrd_i$ if $0 < t <= 300$,  
+$\beta_{xde\hspace{-0.1em}f_{st}}{de\hspace{-0.1em}f_{st}}_i + \beta_{xt_{adjH}}t_{adjH_i} + \beta_{xc_{score}}c_{score_i} + \beta_{xyrd}yrd_i$ if $0 < t_i \leq 300$,  
 
 $\delta_{ix} = \beta_{xint} + \beta_{xpos_o}{pos_o}_i + \beta_{xde\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{xpos_d}{pos_d}_i + \beta_{xde\hspace{-0.1em}f_d}{de\hspace{-0.1em}f_d}_i + \beta_{xpos_{st}}{pos_{st}}_i + \:$  
-$\beta_{xde\hspace{-0.1em}f_{st}}{de\hspace{-0.1em}f_{st}}_i + \beta_{xt_{adjH}}t_{adjH_i} + \beta_{xyrd}yrd_i$ if $1800 < t <= 1980$, and  
+$\beta_{xde\hspace{-0.1em}f_{st}}{de\hspace{-0.1em}f_{st}}_i + \beta_{xt_{adjH}}t_{adjH_i} + \beta_{xyrd}yrd_i$ if $1800 < t_i \leq 1980$, and  
 
 $\delta_{ix} = \beta_{xint} + \beta_{xpos_o}{pos_o}_i + \beta_{xde\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{xpos_d}{pos_d}_i + \beta_{xde\hspace{-0.1em}f_d}{de\hspace{-0.1em}f_d}_i + \beta_{xpos_{st}}{pos_{st}}_i + \:$  
-$\beta_{xde\hspace{-0.1em}f_{st}}{de\hspace{-0.1em}f_{st}}_i + \beta_{xt_{adjH}}t_{adjH_i} + \beta_{xyrd}yrd_i$ if $t <= 0$ 
+$\beta_{xde\hspace{-0.1em}f_{st}}{de\hspace{-0.1em}f_{st}}_i + \beta_{xt_{adjH}}t_{adjH_i} + \beta_{xyrd}yrd_i$ if $t_i \leq 0$ 
 
 Where we define:   
 ${pos_{st}} =$ Special teams DVOA for the team with the ball  
@@ -108,15 +107,12 @@ $c_{score} =$ Comeback score^[The comeback score variable is meant to define the
 $yrd =$ Number of yards needed for an offensive touchdown  
 $t_{adjH} =$ Timeout adjusted time^[The amount of time remaining in the half + 20 secs for every timeout possessed by a team with a comeback score of four or five] remaining in the half  
 
-We don't need to do any of the work converting the pairwise log odds into a distribution as the "nnet" package does this. We will let $\delta_i$ denote the multinomial distribution of scoring events that we will be sampling from move right and draw $N$ samples $\delta_{G_1}$:$\delta_{G_N} \sim \mathcal{Multinomial}(delta_i)$. For samples where the next scoring play is a touchdown, the game state is updated to include a draw for the point after that uses the same method outlined in the "extra points" sub-heading of 2.1.
+We don't need to do any of the work converting the pairwise log odds into a distribution as the "nnet" package does this. We will let $\delta_i$ denote the multinomial distribution of scoring events that we will be sampling from move right and draw $n$ samples $nextScore_{i*_1}, \: nextScore_{i*_2},\: ..., \: nextScore_{i*_n} \sim \mathcal{Multinomial}(\delta_i)$. For samples where the next scoring play is a touchdown, the game state is updated to include a draw for the point after that uses the same method outlined in the "Extra Points" sub-heading of 2.1.
 
-Sampling the time elapsed until the next scoring event is a bit trickier^[Except when the next scoring play is sample to be the end of the half in which case time elapsed is just the time remaining in the half]. First, a linear model^[It outperformed a GAM assuming a Log-Normal distribution with the same inputs by LMRSO CV] predicts the number of plays, $plays_{G_k}$, from the initial game state $i$ until kickoff for each first and ten game state:  
+Sampling the time elapsed until the next scoring event is a bit trickier^[Except when the next scoring play is sample to be the end of the half in which case time elapsed is just the time remaining in the half]. First, a linear model^[It outperformed a GAM assuming a Log-Normal distribution with the same inputs by LMRSO CV] predicts the number of plays, $plays_{i*}$ for each sample $i*$ that take place from the initial game state $i$ until kickoff for each first and ten game state:  
 
-$plays_{G_k} = \beta_{int} + \beta_{pos_o}{pos_o}_i + \beta_{de\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{pos_d}{pos_d}_i + \beta_{de\hspace{-0.1em}f_d}{de\hspace{-0.1em}f_d}_i + \beta_{yrd}\sqrt{yrd_i} + \beta_{c_{score}}c_{score_i} + \:$
-$\beta_{t_{adjH}}\sqrt{t_{adjH_i}} + \beta_{next_{score}}next_{score_{G_k}} + \beta_{c_{score}yrd}c_{score_i}\sqrt{yrd_i}$
-
-Where we define:
-$next_{score} =$ Sampled outcome of the next scoring play
+$\hat{plays_{i*}} = \beta_{int} + \beta_{pos_o}{pos_o}_i + \beta_{de\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{pos_d}{pos_d}_i + \beta_{de\hspace{-0.1em}f_d}{de\hspace{-0.1em}f_d}_i + \beta_{yrd}\sqrt{yrd_i} + \beta_{c_{score}}c_{score_i} + \:$
+$\beta_{t_{adjH}}\sqrt{t_{adjH_i}} + \beta_{nextScore}nextScore_{i*} + \beta_{c_{score}yrd}c_{score_i}\sqrt{yrd_i}$
 
 The distributions of the number of plays until the next scoring plays seems to more closely follow a Log-Normal distribution than a Normal distribution:
 
@@ -132,8 +128,8 @@ To allow for more accurate sampling of the number of plays from the current game
 
 <center>
 
-$log(plays_{G_k}) \sim \mathcal{N}(log(plays_{G_k}),\sigma_{plays}^{2})$ so  
-$plays_{G_k} = e^{log(plays_{G_k})}$  
+$log(plays_{i*}) \sim \mathcal{N}(log(\hat{plays_{i*}}),\sigma_{plays}^{2})$ so  
+$plays_{i*} = e^{log(plays_{i*})}$  
 
 </center>
 
@@ -141,37 +137,41 @@ To transform each sampled number of plays to time space we split the plays into 
 
 <center>
 
-$plays_{stop_{G_k}} \sim \mathcal{Binom}(plays_{G_k}, p_{stop_{G_k}})$ and  
-$plays_{run_{G_k}} = plays_{G_k} - plays_{stop_{G_k}}$
+$nStopped_{i*} \sim \mathcal{Binom}(plays_{i*}, p_{stopped_{i*}})$ and  
+$nRunning_{i*} = plays_{i*} - nStopped_{i*}$
 
 </center>
 
-Where $p_{stop_{G_k}}$ is derived from a GBM detailed in the appendix. Draws that result in fewer than one clock stop are rejected because every scoring play stops the clock. We next find the total time elapsed:
+Where $p_{stopped_{i*}}$ is derived from a GBM detailed in the appendix. Draws that result in fewer than one clock stop are rejected because every scoring play stops the clock.  
 
-let $K = plays_{stop_{G_k}}$ and $J = plays_{run_{G_k}}$
-  $t_{stop_{G_{k_{1:K}}}} \sim \mathcal{N}(\mu_{t_{stop_i}},\sigma_{t_{stop}}^{2})$ where
-  $\mu_{t_{stop_i}} = \beta_{int} + \beta_{down}down_i + \beta_{c_{score}}c_{score_i} + \beta_{ydstogo}ydstogo_i + \beta_{c_{score}down}c_{score_i}down_i +\epsilon_{\mu_{t_{stop}}}$ where  
-    $\epsilon_{\mu_{t_{stop}}} \sim \mathcal{N}(0,\sigma_{\epsilon_{t_{stop}}}^{2})$ and
+We next find the total time elapsed. We start by letting  
+$K = nStopped_{i*}$,  
+$J = nRunning_{i*}$,  
+$S =$ time elapsed for a play after which the clock stops  
+$R =$ time elapsed for a play after which the clock runs:  
 
-  $t_{run_{G_{k_{1:J}}}} \sim \mathcal{N}(\mu_{t_{run_i}},\sigma_{t_{run}}^{2})$ where
-  $\mu_{t_{run_i}} = \beta_{int} + \beta_{down}down_i + \beta_{c_{score}}c_{score_i} + \beta_{ydstogo}ydstogo_i + \beta_{c_{score}down}c_{score_i}down_i +\epsilon_{\mu_{t_{run}}}$ where  
-    $\epsilon_{\mu_{t_{run}}} \sim \mathcal{N}(0,\sigma_{\epsilon_{t_{run}}}^{2})$     
+  $S_{i*_{1}}, \: S_{i*_{2}}, \: ...  , \: S_{i*_{K}} \sim \mathcal{N}(\hat{S_i},\sigma_{S}^{2})$ where
+  $\hat{S_i} = \beta_{int} + \beta_{down}down_i + \beta_{c_{score}}c_{score_i} + \beta_{ydstogo}ydstogo_i + \beta_{c_{score}down}c_{score_i}down_i$  
+  
+  and  
+
+  $R_{i*_{1}}, \: R_{i*_{2}}, \: ...  , \: R_{i*_{J}} \sim \mathcal{N}(\hat{R_i},\sigma_{R}^{2})$ where
+  $\hat{R_i} = \beta_{int} + \beta_{down}down_i + \beta_{c_{score}}c_{score_i} + \beta_{ydstogo}ydstogo_i + \beta_{c_{score}down}c_{score_i}down_i$ 
 
 We then find the time elapsed until the next scoring play as:  
-$t_{elapsed_{G_k}} = \sum_{k=1}^{K}t_{stop_{G_{k_{k}}}} + \sum_{j=1}^{J}t_{G_{k_{j}}}$
+$elapsed_{i*} = \sum_{k=1}^{K}S_k + \sum_{j=1}^{J}R_j$
 
 
 Samples from ${N}(\mu_{t_{stop_i}},\sigma_{t_{stop}}^{2})$ are rejected if they fall outside $[0, 15]$ and samples from ${N}(\mu_{t_{run_i}},\sigma_{t_{run}}^{2})$ are rejected if they fall outside $[15, 50]$ in order to restrict sampled play lengths to a realistic distribution. Additionally, the entire process for sampling a particular value for time elapsed until the next scoring event is repeated if the sample causes an invalid game state^[If a sample is rejected more than 10 times it is that the game state that will result in the end of the half and was misclassified] (i.e. the time elapsed is greater than the amount of time remaining in the half).
 
 
-Finally, the game states $G_{1:N}$ are updated accordingly and we have:  
+Finally, the game states $i*_1, \:i*_2, \:..., \: i*_n \sim I^*$ are updated in accord with the values that have been sampled and we have:  
 
-$WinProb_i = \frac{1}{N} \sum_{k=1}^N(WinProb_{G_k})$ where  
-$WinProb_{G_k}$ is:
+$WinProb_i = \frac{1}{n} \sum_{i*}^{I^*}(WinProb_{i*})$, where $WinProb_{i*}$ == 
 
-  $CDF^{-1}(\frac{\mu_{G_k} + s_{curr_{G_k}}}{\sigma_{G_k}})$ for $t_{G_k} > 600$,   
-  $GBM_{4th}(G_k)$ for $t_{G_k}$ such that $0 < t_{G_k} <= 600$,   
-  $GBM_{ot}(G_k)$ for $t_{G_k} < 0$   
+  $CDF^{-1}(\frac{\hat{\mu}_{i*} + s_{curr_{i*}}}{\sigma^{2}_{i*}})$ for $t_{i*} > 600$,   
+  $GBM_{4th}(i*)$ for $t_{i*}$ such that $0 < t_{i*} \leq 600$,   
+  $GBM_{ot}(i*)$ for $t_{i*} < 0$   
 
 ## Modeling Win Probability in Other Scenarios
 
@@ -232,7 +232,7 @@ $p_{score_i} | \:outcome_{g_k}$ is predicted by a GBM for sampled outcomes that 
 
 $WinProb_{g_k}$ is:  
   $CDF^{-1}(\frac{\mu_{g_k} + s_{curr_{g_k}}}{\sigma_{g_k}})$ for $t_{g_k} > 600$,   
-  $GBM_{4th}(g_k)$ for $t_{g_k}$ such that $0 < t_{g_k} <= 600$,   
+  $GBM_{4th}(g_k)$ for $t_{g_k}$ such that $0 < t_{g_k} \leq 600$,   
   $GBM_{ot}(g_k)$ for $t_{g_k} < 0$   
 
 For samples where score = 0 we must also sample a value for the number of yards downfield the ball will move over the current set of downs before calculating win probability. For each outcome other than conversions and field goal attempts^[and end of halves where we don't need to sample this quantity at all], two linear models are defined—one for downs first through third and one for fourth down—that specify a distribution for the number of yards downfield the ball will move for a given game state. Each linear model is listed in the appendix. The yards moved downfield is modeled separately for each possible outcome because doing so helped most of the linear models meet the assumption of constant residual variance and normally distributed errors^[The exception to this is when the outcome of the set of downs is a conversion, but rejecting samples that were behind the first down marker alleviated this.], allowing for easier sampling. The same reasoning is behind separating fourth down data from other data when fitting each model—the residual variance should be lower on fourth down for each outcome type because there is no longer uncertainty about where a punt, field goal attempt, etc. will be taken from. Conversions are a special case and are split into regular conversions and conversions by penalty.
@@ -263,7 +263,7 @@ Once we have samples for the number of yards the ball has moved downfield we can
 $WinProb_{g_k} = \frac{1}{N}\sum_{j=1}^NWinProb_{g_{k_j}}$ where  
 $WinProb_{g_{k_j}}$ is:  
   $CDF^{-1}(\frac{\mu_{g_{k_j}} + s_{curr_{g_{k_j}}}}{\sigma_{g_{k_j}}})$ for $t_{g_{k_j}} > 600$,   
-  $GBM_{4th}({g_{k_j}})$ for $t_{g_{k_j}}$ such that $0 < t_{g_k} <= 600$,   
+  $GBM_{4th}({g_{k_j}})$ for $t_{g_{k_j}}$ such that $0 < t_{g_k} \leq 600$,   
   $GBM_{ot}({g_{k_j}})$ for $t_{g_{k_j}} < 0$  
   
 The resulting $WinProb_i$ for the initial state $i$ is then computed by taking averaging the values for of win probability for each game state ${g_k}$^[This includes the game states for which $score{g_k}$ was equal to one and $WinProb{g_k}$ was calculated earlier.]: 

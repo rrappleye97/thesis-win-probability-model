@@ -80,12 +80,13 @@
 </ul></li>
 <li class="appendix"><span><b>Appendix</b></span></li>
 <li class="chapter" data-level="A" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html"><i class="fa fa-check"></i><b>A</b> The First Appendix</a><ul>
-<li class="chapter" data-level="A.1" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html#point-chart"><i class="fa fa-check"></i><b>A.1</b> 2 point chart</a></li>
-<li class="chapter" data-level="A.2" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html#clock-stop-gbm-to-predict-p_stop_g_k"><i class="fa fa-check"></i><b>A.2</b> Clock Stop GBM to Predict <span class="math inline">\(p_{stop_{G_k}}\)</span></a></li>
-<li class="chapter" data-level="A.3" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html#downs-outcome-formulas"><i class="fa fa-check"></i><b>A.3</b> Downs outcome formulas</a></li>
-<li class="chapter" data-level="A.4" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html#gbm-for-p_penaltyreplay"><i class="fa fa-check"></i><b>A.4</b> GBM for <span class="math inline">\(P_{penaltyReplay}\)</span></a></li>
-<li class="chapter" data-level="A.5" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html#gbms-for-p_score"><i class="fa fa-check"></i><b>A.5</b> GBMs for <span class="math inline">\(P_{score}\)</span></a></li>
-<li class="chapter" data-level="A.6" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html#linear-models-for-delta-field-position-outcome_g_k"><i class="fa fa-check"></i><b>A.6</b> Linear Models for <span class="math inline">\(\Delta field position | outcome_{g_k}\)</span></a></li>
+<li class="chapter" data-level="A.1" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html#qb-model"><i class="fa fa-check"></i><b>A.1</b> QB Model</a></li>
+<li class="chapter" data-level="A.2" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html#two-point-chart"><i class="fa fa-check"></i><b>A.2</b> Two Point Chart</a></li>
+<li class="chapter" data-level="A.3" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html#clock-stop-gbm-to-predict-p_stopped"><i class="fa fa-check"></i><b>A.3</b> Clock Stop GBM to Predict <span class="math inline">\(p_{stopped}\)</span></a></li>
+<li class="chapter" data-level="A.4" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html#downs-outcome-formulas"><i class="fa fa-check"></i><b>A.4</b> Downs Outcome Formulas</a></li>
+<li class="chapter" data-level="A.5" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html#gbm-for-p_penaltyreplay"><i class="fa fa-check"></i><b>A.5</b> GBM for <span class="math inline">\(P_{penaltyReplay}\)</span></a></li>
+<li class="chapter" data-level="A.6" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html#gbms-for-p_score"><i class="fa fa-check"></i><b>A.6</b> GBMs for <span class="math inline">\(P_{score}\)</span></a></li>
+<li class="chapter" data-level="A.7" data-path="A-the-first-appendix.html"><a href="A-the-first-appendix.html#linear-models-for-delta-field-position-outcome_g"><i class="fa fa-check"></i><b>A.7</b> Linear Models for <span class="math inline">\(\Delta field position | outcome_{g}\)</span></a></li>
 </ul></li>
 <li class="chapter" data-level="" data-path="references.html"><a href="references.html"><i class="fa fa-check"></i>References</a></li>
 <li class="divider"></li>
@@ -119,60 +120,60 @@ Though the play-by-play dataset has everything I need as far as describing the g
 <caption><span id="tab:sample-data">Table 1.1: </span>Sample Use of Outside Data</caption>
 <thead>
 <tr class="header">
-<th align="right">vegas.line</th>
-<th align="right">home.grade</th>
-<th align="right">away.grade</th>
-<th align="right">home.o.dvoa</th>
-<th align="right">home.d.dvoa</th>
-<th align="right">away.o.dvoa</th>
-<th align="right">away.d.dvoa</th>
+<th align="right">Point Spread</th>
+<th align="right">QB Home</th>
+<th align="right">QB Away</th>
+<th align="right">Off DVOA Home</th>
+<th align="right">Off DVOA Away</th>
+<th align="right">Def DVOA Home</th>
+<th align="right">Def DVOA Away</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td align="right">-3.0</td>
-<td align="right">68.42796</td>
-<td align="right">80.86558</td>
-<td align="right">10.400000</td>
-<td align="right">2.300000</td>
-<td align="right">18.7000000</td>
-<td align="right">1.400000</td>
+<td align="right">68.4</td>
+<td align="right">80.9</td>
+<td align="right">10.4</td>
+<td align="right">2.3</td>
+<td align="right">18.7</td>
+<td align="right">1.4</td>
 </tr>
 <tr class="even">
 <td align="right">4.5</td>
-<td align="right">72.63039</td>
-<td align="right">69.87005</td>
-<td align="right">1.580000</td>
-<td align="right">-2.880000</td>
-<td align="right">17.5200000</td>
-<td align="right">-5.360000</td>
+<td align="right">72.6</td>
+<td align="right">69.9</td>
+<td align="right">1.6</td>
+<td align="right">-2.9</td>
+<td align="right">17.5</td>
+<td align="right">-5.4</td>
 </tr>
 <tr class="odd">
 <td align="right">-3.0</td>
-<td align="right">62.61018</td>
-<td align="right">76.90695</td>
-<td align="right">-17.700000</td>
-<td align="right">3.900000</td>
-<td align="right">-0.0333333</td>
-<td align="right">1.600000</td>
+<td align="right">62.6</td>
+<td align="right">76.9</td>
+<td align="right">-17.7</td>
+<td align="right">3.9</td>
+<td align="right">0.0</td>
+<td align="right">1.6</td>
 </tr>
 <tr class="even">
 <td align="right">-5.5</td>
-<td align="right">70.23131</td>
-<td align="right">91.45977</td>
-<td align="right">5.166667</td>
-<td align="right">9.733333</td>
-<td align="right">29.2333333</td>
-<td align="right">11.266667</td>
+<td align="right">70.2</td>
+<td align="right">91.5</td>
+<td align="right">5.2</td>
+<td align="right">9.7</td>
+<td align="right">29.2</td>
+<td align="right">11.3</td>
 </tr>
 <tr class="odd">
 <td align="right">7.0</td>
-<td align="right">72.91262</td>
-<td align="right">71.18786</td>
-<td align="right">19.842857</td>
-<td align="right">-1.785714</td>
-<td align="right">-26.6285714</td>
-<td align="right">6.457143</td>
+<td align="right">72.9</td>
+<td align="right">71.2</td>
+<td align="right">19.8</td>
+<td align="right">-1.8</td>
+<td align="right">-26.6</td>
+<td align="right">6.5</td>
 </tr>
 </tbody>
 </table>

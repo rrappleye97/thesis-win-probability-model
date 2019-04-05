@@ -5,15 +5,15 @@
     "dirty" : false,
     "encoding" : "UTF-8",
     "folds" : "",
-    "hash" : "1097858166",
+    "hash" : "0",
     "id" : "B57C1419",
-    "lastKnownWriteTime" : 1554423675,
-    "last_content_update" : 1554423675227,
+    "lastKnownWriteTime" : 1554431362,
+    "last_content_update" : 1554431362448,
     "path" : "~/thesis-win-probability-model/index/02-data.Rmd",
     "project_path" : "index/02-data.Rmd",
     "properties" : {
-        "cursorPosition" : "21,34",
-        "scrollLine" : "14"
+        "cursorPosition" : "23,58",
+        "scrollLine" : "15"
     },
     "read_only" : false,
     "read_only_alternatives" : [

@@ -5,15 +5,15 @@
     "dirty" : false,
     "encoding" : "UTF-8",
     "folds" : "",
-    "hash" : "2575175576",
+    "hash" : "2426612052",
     "id" : "2A21584",
-    "lastKnownWriteTime" : 1554427984,
-    "last_content_update" : 1554427984091,
+    "lastKnownWriteTime" : 1554433171,
+    "last_content_update" : 1554433171932,
     "path" : "~/thesis-win-probability-model/index/07-appendix.Rmd",
     "project_path" : "index/07-appendix.Rmd",
     "properties" : {
-        "cursorPosition" : "17,66",
-        "scrollLine" : "0"
+        "cursorPosition" : "26,40",
+        "scrollLine" : "15"
     },
     "read_only" : false,
     "read_only_alternatives" : [

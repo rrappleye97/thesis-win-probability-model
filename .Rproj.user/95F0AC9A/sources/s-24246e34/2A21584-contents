@@ -24,7 +24,7 @@ kable(scores,
   booktabs = TRUE)
 ```
 
-## Clock Stop GBM to Predict $p_{stop}$ 
+## Clock Stop GBM to Predict $p_{stopped}$ 
 This GBM predicts the probability of the clock stopped on a given play by using the following variables where the value for each variable is the value for the variable at the previous kickoff to account for that face that this model has to predict the probability of the clock stopping not just for the current play but also for some number of plays in the future despite being unable to update other information.
 ```{r clockstop GBM, results="asis", echo=FALSE, cache = TRUE}
 vars = c("Clock Will Stop", "Number of Plays Until the Next Scoring Event", "Timeout Adjusted Time Remaining in the Half", "The Comeback Score")
