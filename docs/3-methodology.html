@@ -115,13 +115,11 @@
 <p><strong>Model when more than ten minutes remain:</strong><br />
 On kickoffs a win probability is modeled using a variation of the trick PFR uses to implement a normal distribution when deriving win probability for a given game state <span class="math inline">\(i\)</span>:</p>
 <p><span class="math inline">\(\Delta score_i \sim \mathcal{N}(\mu_i,\sigma_i^{2})\)</span> where</p>
-<p><span class="math inline">\(\mu_i = \beta_{int} + \beta_\rho\rho_i + \beta_{pos_o}{pos_o}_i + \beta_{de\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{s_{curr}}s_{curr_i}\:+\)</span><br />
-<span class="math inline">\(\beta_kk_i + \beta_{kpos_o}k_ipos_{o_i} + \beta_{k{de\hspace{-0.1em}f_o}}k_i{de\hspace{-0.1em}f_{o_i}} + \beta_{s_{curr}pos_o}s_{curr_i}pos_{o_i} + \beta_{s_{curr}{de\hspace{-0.1em}f_o}}s_{curr_i}{de\hspace{-0.1em}f_{o_i}} + \epsilon_{\mu}\)</span> where<br />
-<span class="math inline">\(\epsilon_{\mu} \sim \mathcal{N}(0,\sigma_{\epsilon_{\mu}}^{2})\)</span></p>
+<p><span class="math inline">\(\hat{\mu}_i = \beta_{int} + \beta_\rho\rho_i + \beta_{pos_o}{pos_o}_i + \beta_{de\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{s_{curr}}s_{curr_i}\:+\)</span><br />
+<span class="math inline">\(\beta_kk_i + \beta_{kpos_o}k_ipos_{o_i} + \beta_{k{de\hspace{-0.1em}f_o}}k_i{de\hspace{-0.1em}f_{o_i}} + \beta_{s_{curr}pos_o}s_{curr_i}pos_{o_i} + \beta_{s_{curr}{de\hspace{-0.1em}f_o}}s_{curr_i}{de\hspace{-0.1em}f_{o_i}}\)</span></p>
 <p>and</p>
-<p><span class="math inline">\(\sigma_i = \beta_{int} + \beta_{pos_o}{pos_o}_i + \beta_{de\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{pos_d}{pos_d}_i + \beta_{de\hspace{-0.1em}f_d}{de\hspace{-0.1em}f_d}_i + \beta_{s_{curr}}s_{curr_i} + \beta_{s_{curr_{abs}}}\mid\hspace{-0.2em}{s_{curr_i}}\hspace{-0.2em}\mid + \beta_tt_i \: +\)</span><br />
-<span class="math inline">\(\beta_{ts}\sqrt{t_i} + \beta_{pos_{qb}}{pos_{qb}}_i + \beta_{de\hspace{-0.1em}f_{qb}}{de\hspace{-0.1em}f_{qb}}_i\)</span> + <span class="math inline">\(\beta_{pos_{qb}s}{pos_{qb}}_is_i + \beta_{de\hspace{-0.1em}f_{qb}s}{de\hspace{-0.1em}f_{qb}}_is_i + \epsilon_{\sigma}\)</span> where<br />
-<span class="math inline">\(\epsilon_{\sigma} \sim \mathcal{N}(0,\sigma_{\epsilon_{\sigma}}^{2})\)</span></p>
+<p><span class="math inline">\(\hat{\sigma}_i = \beta_{int} + \beta_{pos_o}{pos_o}_i + \beta_{de\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{pos_d}{pos_d}_i + \beta_{de\hspace{-0.1em}f_d}{de\hspace{-0.1em}f_d}_i + \beta_{s_{curr}}s_{curr_i} + \beta_{s_{curr_{abs}}}\mid\hspace{-0.2em}{s_{curr_i}}\hspace{-0.2em}\mid + \beta_tt_i \: +\)</span><br />
+<span class="math inline">\(\beta_{ts}\sqrt{t_i} + \beta_{pos_{qb}}{pos_{qb}}_i + \beta_{de\hspace{-0.1em}f_{qb}}{de\hspace{-0.1em}f_{qb}}_i\)</span> + <span class="math inline">\(\beta_{pos_{qb}s}{pos_{qb}}_is_i + \beta_{de\hspace{-0.1em}f_{qb}s}{de\hspace{-0.1em}f_{qb}}_is_i\)</span></p>
 <p>Where we define:<br />
 <span class="math inline">\(int =\)</span> Intercept,<br />
 <span class="math inline">\(\rho =\)</span> = Scaled point spread<br />
@@ -198,8 +196,7 @@ The assumption that <span class="math inline">\(\Delta score\)</span> is normall
 A GBM fit with the same variables as above but trained only on overtime data is used to determine win probability in overtime situations.</p>
 <p><strong>Extra Points</strong><br />
 For extra points the process only involves the additional step of sampling <span class="math inline">\(n\)</span> outcomes for the extra point or two point conversion try<a href="#fn5" class="footnote-ref" id="fnref5"><sup>5</sup></a> and passing each resulting game state <span class="math inline">\(i*\)</span> to the model that predicts win probability to find:</p>
-<p><span class="math inline">\(WinProb_i = \frac{1}{n} \sum_{k=1}^nWinProb_{i*}\)</span><br />
-<span class="math inline">\(WinProb_i*\)</span> is:</p>
+<p><span class="math inline">\(WinProb_i = \frac{1}{n} \sum_{k=1}^nWinProb_{i*}\)</span>, where <span class="math inline">\(WinProb_i*\)</span> =</p>
 <p><span class="math inline">\(CDF^{-1}(\frac{\mu_{i*} + s_{curr_{i*}}}{\sigma^{2}_{i*}})\)</span> if <span class="math inline">\(t_{i*} &gt; 600\)</span>,<br />
 <span class="math inline">\(GBM_{4th}(i*)\)</span> if <span class="math inline">\(0 &lt;t_{i*} \leq 600\)</span>, and<br />
 <span class="math inline">\(GBM_{ot}(i*)\)</span> if <span class="math inline">\(t_{i*} &lt; 0\)</span></p>
@@ -252,8 +249,7 @@ For extra points the process only involves the additional step of sampling <span
 <span class="math inline">\(elapsed_{i*} = \sum_{k=1}^{K}S_k + \sum_{j=1}^{J}R_j\)</span></p>
 <p>Samples from <span class="math inline">\({N}(\mu_{t_{stop_i}},\sigma_{t_{stop}}^{2})\)</span> are rejected if they fall outside <span class="math inline">\([0, 15]\)</span> and samples from <span class="math inline">\({N}(\mu_{t_{run_i}},\sigma_{t_{run}}^{2})\)</span> are rejected if they fall outside <span class="math inline">\([15, 50]\)</span> in order to restrict sampled play lengths to a realistic distribution. Additionally, the entire process for sampling a particular value for time elapsed until the next scoring event is repeated if the sample causes an invalid game state<a href="#fn11" class="footnote-ref" id="fnref11"><sup>11</sup></a> (i.e. the time elapsed is greater than the amount of time remaining in the half).</p>
 <p>Finally, the game states <span class="math inline">\(i*_1, \:i*_2, \:..., \: i*_n \sim I^*\)</span> are updated in accord with the values that have been sampled and we have:</p>
-<p><span class="math inline">\(WinProb_i = \frac{1}{n} \sum_{i*}^{I^*}(WinProb_{i*})\)</span>
-where <span class="math inline">\(WinProb_{i*}\)</span> is:</p>
+<p><span class="math inline">\(WinProb_i = \frac{1}{n} \sum_{i*}^{I^*}(WinProb_{i*})\)</span>, where <span class="math inline">\(WinProb_{i*}\)</span> =</p>
 <p><span class="math inline">\(CDF^{-1}(\frac{\hat{\mu}_{i*} + s_{curr_{i*}}}{\sigma^{2}_{i*}})\)</span> for <span class="math inline">\(t_{i*} &gt; 600\)</span>,<br />
 <span class="math inline">\(GBM_{4th}(i*)\)</span> for <span class="math inline">\(t_{i*}\)</span> such that <span class="math inline">\(0 &lt; t_{i*} \leq 600\)</span>,<br />
 <span class="math inline">\(GBM_{ot}(i*)\)</span> for <span class="math inline">\(t_{i*} &lt; 0\)</span></p>
@@ -262,11 +258,11 @@ where <span class="math inline">\(WinProb_{i*}\)</span> is:</p>
 <h2><span class="header-section-number">3.3</span> Modeling Win Probability in Other Scenarios</h2>
 <p>When the game state does not fit any of the scenarios above<a href="#fn12" class="footnote-ref" id="fnref12"><sup>12</sup></a>, it is first advanced to the next set of downs. To do this we take m samples of the triple (outcome of the current set of downs, time elapsed until the next set of downs, current set of downs results in scoring play). We also sample the number of yards downfield the ball will move over the current set of downs for all draws where the current set of downs does not result in a scoring play.</p>
 <p>Seven possible outcomes are also defined for a given set of downs: conversion, turnover on downs, end half, field goal attempt, punt, safety, and turnover. As was the case when modeling the next scoring event, end of half, end of game, and overtime game states are modeled separately from other game states. Additionally, separate models were fit for each down because the log loss was lower for each down when separate models were fitted for each during LMRSO CV. End of half, end of game and overtime game states were all modeled with separate GBMs fit using the “gbm” package while all other game states were modeled with a multinomial logistic regression fit with the “nnet” package. The model formulas are listed in the appendix. The models all utilize down, yards to go, DVOA ratings, quarterback grades and a version of yard line that treats each 10 yard increment of the field as a separate group to help the model make better decisions about the likelihood of field goal attempts, punts, and fourth down conversion attempts.</p>
-<p><img src="thesis_files/figure-html/fg-by-yardline-1.png" width="672" style="display: block; margin: auto;" />
-After we have sampled <span class="math inline">\(n\)</span> outcomes, <span class="math inline">\(outcome_{g_1}:outcome_{g_n}\)</span>, we move on to sampling from the distribution of time elapsed. We begin by sampling the number of plays until the next set of downs. For a given inital game state <span class="math inline">\(i\)</span> this is treated as:</p>
-<p><span class="math inline">\(Plays_{downs_{g_k}} = downstogo_{g_k} + replaysByPenalty_{g_k}\)</span> where
-<span class="math inline">\(downstogo_{g_k} = 5 - down_{curr_i}\)</span> for punts, turnovers on downs, and field goal attempts and<br />
-<span class="math inline">\(downstogo_{g_k} \sim \mathcal{Multinomial}(outcomeDist)\)</span> for conversions, safeties, and turnovers where<br />
+<p><img src="thesis_files/figure-html/fg-by-yardline-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>After we have created a distribution <span class="math inline">\(\delta_i\)</span> of potential outcomes of the set of downs associated with our inital game state <span class="math inline">\(i\)</span> and sampled <span class="math inline">\(n\)</span> outcomes <span class="math inline">\(outcome_{i*_1}, \: outcome_{i*_2}, \:..., \:outcome_{i*_n} \sim \mathcal{Multinomial}(\delta_i)\)</span>, we move on to sampling from the distribution of time elapsed. We begin by sampling the number of plays until the next set of downs. This is treated as:</p>
+<p><span class="math inline">\(Plays_{i*} = downstogo_{i*} + replaysByPenalty_{i*}\)</span> where
+<span class="math inline">\(downstogo_{i*} = 5 - down_i\)</span> for punts, turnovers on downs, and field goal attempts and<br />
+<span class="math inline">\(downstogo_{i*} \sim \mathcal{Multinomial}(outcomeDist)\)</span> for conversions, safeties, and turnovers where<br />
 <span class="math inline">\(outcomeDist =\)</span><br />
 <span class="math inline">\((0.349, 0.348, 0.276, 0.027)\)</span> for conversions,<br />
 <span class="math inline">\((0.363, 0.312, 0.293, 0.032)\)</span> for turnovers, and<br />

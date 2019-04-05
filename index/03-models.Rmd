@@ -9,15 +9,13 @@ On kickoffs a win probability is modeled using a variation of the trick PFR uses
 
 $\Delta score_i \sim \mathcal{N}(\mu_i,\sigma_i^{2})$ where  
 
-$\mu_i = \beta_{int} + \beta_\rho\rho_i + \beta_{pos_o}{pos_o}_i + \beta_{de\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{s_{curr}}s_{curr_i}\:+$  
-$\beta_kk_i + \beta_{kpos_o}k_ipos_{o_i} + \beta_{k{de\hspace{-0.1em}f_o}}k_i{de\hspace{-0.1em}f_{o_i}} + \beta_{s_{curr}pos_o}s_{curr_i}pos_{o_i} + \beta_{s_{curr}{de\hspace{-0.1em}f_o}}s_{curr_i}{de\hspace{-0.1em}f_{o_i}} + \epsilon_{\mu}$ where  
-$\epsilon_{\mu} \sim \mathcal{N}(0,\sigma_{\epsilon_{\mu}}^{2})$  
+$\hat{\mu}_i = \beta_{int} + \beta_\rho\rho_i + \beta_{pos_o}{pos_o}_i + \beta_{de\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{s_{curr}}s_{curr_i}\:+$  
+$\beta_kk_i + \beta_{kpos_o}k_ipos_{o_i} + \beta_{k{de\hspace{-0.1em}f_o}}k_i{de\hspace{-0.1em}f_{o_i}} + \beta_{s_{curr}pos_o}s_{curr_i}pos_{o_i} + \beta_{s_{curr}{de\hspace{-0.1em}f_o}}s_{curr_i}{de\hspace{-0.1em}f_{o_i}}$ 
 
 and  
 
-$\sigma_i = \beta_{int} + \beta_{pos_o}{pos_o}_i + \beta_{de\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{pos_d}{pos_d}_i + \beta_{de\hspace{-0.1em}f_d}{de\hspace{-0.1em}f_d}_i  + \beta_{s_{curr}}s_{curr_i} + \beta_{s_{curr_{abs}}}\mid\hspace{-0.2em}{s_{curr_i}}\hspace{-0.2em}\mid + \beta_tt_i \: +$  
-$\beta_{ts}\sqrt{t_i} + \beta_{pos_{qb}}{pos_{qb}}_i + \beta_{de\hspace{-0.1em}f_{qb}}{de\hspace{-0.1em}f_{qb}}_i$ + $\beta_{pos_{qb}s}{pos_{qb}}_is_i + \beta_{de\hspace{-0.1em}f_{qb}s}{de\hspace{-0.1em}f_{qb}}_is_i + \epsilon_{\sigma}$ where  
-$\epsilon_{\sigma} \sim \mathcal{N}(0,\sigma_{\epsilon_{\sigma}}^{2})$
+$\hat{\sigma}_i = \beta_{int} + \beta_{pos_o}{pos_o}_i + \beta_{de\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{pos_d}{pos_d}_i + \beta_{de\hspace{-0.1em}f_d}{de\hspace{-0.1em}f_d}_i  + \beta_{s_{curr}}s_{curr_i} + \beta_{s_{curr_{abs}}}\mid\hspace{-0.2em}{s_{curr_i}}\hspace{-0.2em}\mid + \beta_tt_i \: +$  
+$\beta_{ts}\sqrt{t_i} + \beta_{pos_{qb}}{pos_{qb}}_i + \beta_{de\hspace{-0.1em}f_{qb}}{de\hspace{-0.1em}f_{qb}}_i$ + $\beta_{pos_{qb}s}{pos_{qb}}_is_i + \beta_{de\hspace{-0.1em}f_{qb}s}{de\hspace{-0.1em}f_{qb}}_is_i$
 
 Where we define:  
 $int =$ Intercept,  
@@ -167,7 +165,7 @@ Samples from ${N}(\mu_{t_{stop_i}},\sigma_{t_{stop}}^{2})$ are rejected if they 
 
 Finally, the game states $i*_1, \:i*_2, \:..., \: i*_n \sim I^*$ are updated in accord with the values that have been sampled and we have:  
 
-$WinProb_i = \frac{1}{n} \sum_{i*}^{I^*}(WinProb_{i*})$, where $WinProb_{i*}$ == 
+$WinProb_i = \frac{1}{n} \sum_{i*}^{I^*}(WinProb_{i*})$, where $WinProb_{i*}$ = 
 
   $CDF^{-1}(\frac{\hat{\mu}_{i*} + s_{curr_{i*}}}{\sigma^{2}_{i*}})$ for $t_{i*} > 600$,   
   $GBM_{4th}(i*)$ for $t_{i*}$ such that $0 < t_{i*} \leq 600$,   
@@ -209,11 +207,12 @@ ggplot() +
   labs(x = "Yards from Endzone", y = "Probability of Being Outcome", title = "P(Downs Outcome) by Yards from Endzone", subtitle = "2010 to 2015 NFL data")
 
 ```
-After we have sampled $n$ outcomes, $outcome_{g_1}:outcome_{g_n}$, we move on to sampling from the distribution of time elapsed. We begin by sampling the number of plays until the next set of downs. For a given inital game state $i$ this is treated as:
 
-$Plays_{downs_{g_k}} = downstogo_{g_k} + replaysByPenalty_{g_k}$ where
-$downstogo_{g_k} = 5 - down_{curr_i}$ for punts, turnovers on downs, and field goal attempts and  
-$downstogo_{g_k} \sim \mathcal{Multinomial}(outcomeDist)$ for conversions, safeties, and turnovers where  
+After we have created a distribution $\delta_i$ of potential outcomes of the set of downs associated with our inital game state $i$ and sampled $n$ outcomes $outcome_{i*_1}, \: outcome_{i*_2}, \:..., \:outcome_{i*_n} \sim \mathcal{Multinomial}(\delta_i)$, we move on to sampling from the distribution of time elapsed. We begin by sampling the number of plays until the next set of downs. This is treated as:
+
+$Plays_{i*} = downstogo_{i*} + replaysByPenalty_{i*}$ where
+$downstogo_{i*} = 5 - down_i$ for punts, turnovers on downs, and field goal attempts and  
+$downstogo_{i*} \sim \mathcal{Multinomial}(outcomeDist)$ for conversions, safeties, and turnovers where  
 $outcomeDist =$    
   $(0.349, 0.348, 0.276, 0.027)$ for conversions,  
   $(0.363, 0.312, 0.293, 0.032)$ for turnovers, and  
