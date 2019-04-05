@@ -596,7 +596,7 @@ pred = predict(n.plays.until.kickoff.lm, data.kickoffs[which(data.kickoffs$year 
 mse = mean((pred - data.kickoffs$n.plays.until.kickoff[which(data.kickoffs$year == 2017)])^2)
 
 #fit distribution to residual plot to get se of residuals if they follow lognorm distribution
-test = fitdist(data.kickoffs$n.plays.until.kickoff[data.kickoffs$year < 2017], distr="lnorm", method="mle")
+test = fitdist(n.plays.until.kickoff.lm, distr="lnorm", method="mle")
 saveRDS(test$estimate[2], file = "final-models/n.plays.lnorm.sigma.Rda")
 
 #check validity of chosen distribution

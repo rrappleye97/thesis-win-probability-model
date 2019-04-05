@@ -11,7 +11,9 @@ $\Delta score_i \sim \mathcal{N}(\mu_i,\sigma_i^{2})$ where
 
 $\mu_i = \beta_{int} + \beta_\rho\rho_i + \beta_{pos_o}{pos_o}_i + \beta_{de\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{s_{curr}}s_{curr_i}\:+$  
 $\beta_kk_i + \beta_{kpos_o}k_ipos_{o_i} + \beta_{k{de\hspace{-0.1em}f_o}}k_i{de\hspace{-0.1em}f_{o_i}} + \beta_{s_{curr}pos_o}s_{curr_i}pos_{o_i} + \beta_{s_{curr}{de\hspace{-0.1em}f_o}}s_{curr_i}{de\hspace{-0.1em}f_{o_i}} + \epsilon_{\mu}$ where  
-$\epsilon_{\mu} \sim \mathcal{N}(0,\sigma_{\epsilon_{\mu}}^{2})$ and  
+$\epsilon_{\mu} \sim \mathcal{N}(0,\sigma_{\epsilon_{\mu}}^{2})$  
+
+and  
 
 $\sigma_i = \beta_{int} + \beta_{pos_o}{pos_o}_i + \beta_{de\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{pos_d}{pos_d}_i + \beta_{de\hspace{-0.1em}f_d}{de\hspace{-0.1em}f_d}_i  + \beta_{s_{curr}}s_{curr_i} + \beta_{s_{curr_{abs}}}\mid\hspace{-0.2em}{s_{curr_i}}\hspace{-0.2em}\mid + \beta_tt_i \: +$  
 $\beta_{ts}\sqrt{t_i} + \beta_{pos_{qb}}{pos_{qb}}_i + \beta_{de\hspace{-0.1em}f_{qb}}{de\hspace{-0.1em}f_{qb}}_i$ + $\beta_{pos_{qb}s}{pos_{qb}}_is_i + \beta_{de\hspace{-0.1em}f_{qb}s}{de\hspace{-0.1em}f_{qb}}_is_i + \epsilon_{\sigma}$ where  
@@ -30,7 +32,7 @@ $de\hspace{-0.1em}f_d =$ Defensive DVOA for the team on defense
 $pos_{qb} =$ Projected PFF grade for the quarterback of the team with the ball  
 $de\hspace{-0.1em}f_{qb} =$ Projected PFF grade for the quarterback of the team on defense  
 
-By making the observation that the final score differential is simply the current score differential plus $\Delta score$ we find:
+By making the observation that the final score differential is simply $s_{curr} + \Delta score$ we find:
 
 <center>
 
@@ -75,13 +77,14 @@ A shrinkage parameter $l$ exists to reduce the learning rate of trees. Lower val
 A GBM fit with the same variables as above but trained only on overtime data is used to determine win probability in overtime situations. 
 
 **Extra Points**  
-For extra points the process only involves the additional step of sampling n outcomes from the extra point or two point conversion try^[A chart defining situations where a team is classified as going for two is listed in the appendix] before passing the $n_{xp}$ resulting game states $g_{1:n_{xp}}$to the model that predicts win probability to find:
+For extra points the process only involves the additional step of sampling $n$ outcomes for the extra point or two point conversion try^[A chart defining situations where a team is classified as going for two is listed in the appendix] and passing each resulting game state $i*$ to the model that predicts win probability to find:
 
-$WinProb_i$ is:  
+$WinProb_i = \frac{1}{n} \sum_{k=1}^nWinProb_{i*}$
+$WinProb_i*$ is:  
 
-  $\frac{1}{n_{xp}} \sum_{k=1}^{n_{xp}}CDF^{-1}(\frac{\mu_{g_k} + s_{curr_{g_k}}}{\sigma_{g_k}})$ if $t_i > 600$,  
-  $\frac{1}{n_{xp}} \sum_{k=1}^{n_{xp}}GBM_{4th}(g_k)$ if $0 <t_i <= 600$, and   
-  $\frac{1}{n_{xp}} \sum_{k=1}^{n_{xp}}GBM_{ot}(g_k)$ if $t_i < 0$  
+  $CDF^{-1}(\frac{\mu_{i*} + s_{curr_{i*}}}{\sigma_{i*}})$ if $t_{i*} > 600$,  
+  $GBM_{4th}(i*)$ if $0 <t_{i*} <= 600$, and   
+  $GBM_{ot}(i*)$ if $t_{i*} < 0$  
 
 ## Modeling Win Probability on First and Ten
 When the game state features a first and ten we must take $n$ samples of the pair (next scoring event, time elapsed) where, just as in Horowitz, Ventura, and Yurko (2018) the seven possible outcomes for the next scoring event include a touchdown, field goal, or safety for either team and no scoring events before the end of the half. As is done by Horowitz, Ventura and Yurko (2018), the next scoring event is modeled by a multinomial logistic regression, though this work uses the Brian Ripley’s “nnet” package to implement a multinomial logistic regression instead of comparing a set of binary logistic regressions with a chosen baseline event. Modeling end of half, end of game, and overtime situations separately gave the most robust performance by LMRSO CV. The formulas for some of the linear models are the same, but each model was trained only on data within the time window where it would be applied. A multinomial GBM model was also considered. For a given initial game state $i$ we find the log odds for each possible outcome $x$ of being the next scoring event $\delta_x$ as compared to a baseline outcome:^[is it obvious that the parameters for the specified models are all different? i.e. that one $\beta_{xint} !=$ another $\beta_{xint}$. Is this notation okay?]
@@ -115,13 +118,14 @@ $\beta_{t_{adjH}}\sqrt{t_{adjH_i}} + \beta_{next_{score}}next_{score_{G_k}} + \b
 Where we define:
 $next_{score} =$ Sampled outcome of the next scoring play
 
-The residuals seem to more closely follow a Log-Normal distribution than a Normal distribution:
+The distributions of the number of plays until the next scoring plays seems to more closely follow a Log-Normal distribution than a Normal distribution:
 
 ```{r test-log-norm, results="asis", echo=FALSE, cache = TRUE}
-model = readRDS("/home/guest/thesis-win-probability-model/models/kickoff.n.plays.lm.Rda")
+data = readRDS("/home/guest/thesis-win-probability-model/cleaned-data-part-4.Rda")
+data = data[which(data$year < 2016 & data$kickoff==1 & !is.na(data$n.plays.until.kickoff)),]
 ggplot() +
-  geom_density(aes(x = model$residuals), color = "steelblue") +
-  labs(x = "Residuals for number of plays until next scoring event", title = "Density plot of residuals for plays until the next score")
+  geom_density(aes(x = data$n.plays.until.kickoff), color = "steelblue") +
+  labs(x = "Number of plays", y = "Density", title = "Density Plot of the Number of Plays from One Score to the Next")
 ```
 
 To allow for more accurate sampling of the number of plays from the current game state to the next scoring play the "fitdistrplus” package by Marie-Laure Delignette-Muller is used to choose the parameters of a Log-Normal distribution that fit the data best. $\sigma^{2}_{plays}$ is set to the variance parameter of the chosen Log-Normal and we sample:

@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1554425114266.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2575175576",
+    "id" : "2A21584",
+    "lastKnownWriteTime" : 1554427984,
+    "last_content_update" : 1554427984091,
+    "path" : "~/thesis-win-probability-model/index/07-appendix.Rmd",
+    "project_path" : "index/07-appendix.Rmd",
+    "properties" : {
+        "cursorPosition" : "17,66",
+        "scrollLine" : "0"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 9,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

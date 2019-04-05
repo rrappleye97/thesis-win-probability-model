@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1554428153914.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2846692651",
+    "id" : "566EE3A3",
+    "lastKnownWriteTime" : 1554428521,
+    "last_content_update" : 1554428521901,
+    "path" : "~/thesis-win-probability-model/make-final-models.Rmd",
+    "project_path" : "make-final-models.Rmd",
+    "properties" : {
+        "cursorPosition" : "599,0",
+        "scrollLine" : "585"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 10,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

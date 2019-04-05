@@ -1,0 +1,6 @@
+"0","#fit distribution to residual plot to get se of residuals if they follow lognorm distribution
+test = fitdist(n.plays.until.kickoff.lm, distr=""lnorm"", method=""mle"")
+"
+"2","Error in fitdist(n.plays.until.kickoff.lm, distr = ""lnorm"", method = ""mle"") : 
+  could not find function ""fitdist""
+"

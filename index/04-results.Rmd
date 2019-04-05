@@ -138,7 +138,7 @@ ggplot() +
   labs(
     x = "Time Remaining (seconds)",
     y = "Win Probability",
-    title = "Win Probability of New Orleans Saints During game vs. Washington Redskins by Model",
+    title = "Win Probability of New Orleans Saints During a Game",
     subtitle = "Washington Redskins vs. New Orleans Saints",
     caption = "Play by play data from nflscrapR"
   ) + theme_bw()
