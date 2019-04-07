@@ -25,5 +25,5 @@ To create a hanging indent and spacing between entries.  These three lines may n
 
 ---
 nocite: | 
-  @lock2014, @nflWAR, @friedman2001, @friedman2002, @PFF, @PFR, @ESPN, @FootballOutsiders
+  @lock2014, @nflWAR, @friedman2001, @friedman2002, @PFF, @PFR, @ESPN, @FootballOutsiders, @burke2014
 ...

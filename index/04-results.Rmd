@@ -1,24 +1,24 @@
 # Results
 
-Model performance is tested by re-training each sub-model on the entire training set^[The training set is comprised of all the 2010-2016 data. During the tuning process each model was trained only on 2010-2015 data.] and evaluating the performance of the models when the protocol described in chapter 3 is used. Results are then are then compared against the other two models for which we have data—the models developed by Lock and Nettleton (2014) and Horowitz, Ventura, and Yurko (2018). The two loss functions used to measure model performance are Brier score, the mean of the squared distance between each prediction and the corresponding outcome, and log loss, the mean of the ln(1 - distance) for each prediction and the corresponding outcome.
+Model performance is tested by re-training each sub-model on the entire training set^[The training set is comprised of all the 2010-2016 data. During the tuning process each model was trained only on 2010-2015 data.] and evaluating the performance of the models when the protocol described in Chapter 2 is used. Results are then are then compared against the other two models for which we have access to 2017 predictions—the models developed by Lock and Nettleton (2014) and Horowitz, Ventura, and Yurko (2018). The two loss functions we use to measure model performance are Brier score, the mean of the squared distance between each prediction and the corresponding outcome, and log loss, the mean of the $log(1 - distance)$ for each prediction and the corresponding outcome. 
 
 ```{r resultsoverall, results="asis", echo=FALSE, cache = TRUE}
 mse.regular = readRDS(file = "/home/guest/thesis-win-probability-model/mse-regular.Rda")
-colnames(mse.regular)[1] = "Our Model"
+colnames(mse.regular) = c("Our Model", "nflscrapR Model", "Lock and Nettleton Model")
 kable(mse.regular, 
-      caption = "Brier score by model",
+      caption = "Brier Score by Model",
       longtable = TRUE,
       booktabs = TRUE)
 
 log.loss.regular = readRDS(file = "/home/guest/thesis-win-probability-model/log-loss-regular.Rda")
-colnames(log.loss.regular)[1] = "Our Model"
+colnames(log.loss.regular) = c("Our Model", "nflscrapR Model", "Lock and Nettleton Model")
 kable(log.loss.regular, 
-      caption = "Log loss by model",
+      caption = "Log Loss by Model",
       longtable = TRUE,
       booktabs = TRUE)
 ```
 
-We can also see that, as expected, the model generally performs better as the game progresses with the exception of overtime^[There is a ceiling to how well even an all-knowing model could perform when predicting overtime because the games are so close to coin flips.]. Each model tested has a Brier score above 0.25 for the overtime period, indicating that, at least for the 2017 season, each model would be better off classifying every overtime game as a coin flip.
+We can also see that, as expected, the model generally performs better as the game progresses with the exception of overtime^[There is a ceiling to how well even an all-knowing model could perform when predicting overtime because the games are so close to coin flips.]. Interestingly, each model tested has a Brier score above 0.25 for the overtime period, indicating that, at least for the 2017 season, each model would be better off classifying every overtime game as a coin flip.
 
 ```{r resultsquarter, results="asis", echo=FALSE, cache = TRUE}
 mse.quarter.df = readRDS(file = "/home/guest/thesis-win-probability-model/mse-quarter-df.Rda")
@@ -52,7 +52,7 @@ kable(mse.down.df,
 ```
 
 
-To test calibration game outcomes are grouped by bins that correspond to model predictions between a set of values. Twenty bins are created with each bin representing all points where the model predictions fell within a given five percent window. The mean game outcome is then plotted against the mean model prediction for each bin where the plot for a perfectly calibrated model would show a straight line with a slope of one. 
+To test calibration, game outcomes are grouped into bins that correspond to model predictions between a set of values. Twenty bins are created with each bin representing all points where the model predictions fell within a given five percent window. The mean game outcome is then plotted against the mean model prediction for each bin where the plot for a perfectly calibrated model would show a straight line with a slope of one. 
 
 
 ```{r calibration, results="asis", echo=FALSE, cache = TRUE}
@@ -64,6 +64,9 @@ scrapr.mean.prob = rep(NA, 20)
 my.bucket.win.prob = rep(NA, 20)
 lock.bucket.win.prob = rep(NA, 20)
 scrapr.bucket.win.prob = rep(NA, 20)
+my.size = rep(NA, 20)
+lock.size = rep(NA, 20)
+scrapr.size = rep(NA, 20)
 
 for(i in c(1:20)){
   my.bucket.win.prob[i] = mean(test.set$pos.win[which(test.set$predictions >= game.buckets[i]-.05 &
@@ -78,23 +81,29 @@ for(i in c(1:20)){
     test.set$lock.nettleton.prob <= game.buckets[i])], na.rm = T)
   scrapr.mean.prob[i] = mean(test.set$Win_Prob[which(test.set$Win_Prob >= game.buckets[i]-.05 &
     test.set$Win_Prob <= game.buckets[i])], na.rm = T)
+  my.size[i] = length(which(test.set$predictions >= game.buckets[i]-.05 &
+    test.set$predictions <= game.buckets[i]))
+  lock.size[i] = length(which(test.set$lock.nettleton.prob >= game.buckets[i]-.05 &
+    test.set$lock.nettleton.prob <= game.buckets[i]))
+  scrapr.size[i] = length(which(test.set$Win_Prob >= game.buckets[i]-.05 &
+    test.set$Win_Prob <= game.buckets[i]))
 }
 
 my.calibration.plot = ggplot() +
-  geom_line(aes(x = my.mean.prob, y = my.bucket.win.prob, color = "model calibration")) + 
-  geom_line(aes(x = seq(0, 1, by = 0.05), y = seq(0, 1, by = 0.05), color = "perfect calibration")) +
-  geom_point(aes(x = my.mean.prob, y = my.bucket.win.prob, color = "model calibration")) + 
-  labs(title = "Actual vs. predicted win probability for my model", x = "actual win probability", y = "predicted win probability")
+  geom_line(aes(x = my.mean.prob, y = my.bucket.win.prob, color = "Model Calibration")) + 
+  geom_line(aes(x = seq(0, 1, by = 0.05), y = seq(0, 1, by = 0.05), color = "Perfect Calibration")) +
+  geom_point(aes(x = my.mean.prob, y = my.bucket.win.prob, color = "Model Calibration", size = my.size)) + 
+  labs(title = "Actual vs. Predicted Win Probability for Our Model", x = "Actual Win Probability", y = "Predicted Win Probability", size = "Size")
 lock.calibration.plot = ggplot() +
-  geom_line(aes(x = lock.mean.prob, y = lock.bucket.win.prob, color = "model calibration")) + 
-  geom_line(aes(x = seq(0, 1, by = 0.05), y = seq(0, 1, by = 0.05), color = "perfect calibration")) +
-  geom_point(aes(x = lock.mean.prob, y = lock.bucket.win.prob, color = "model calibration")) + 
-  labs(title = "Actual vs. predicted win probability for Lock and Nettleton's model", x = "actual win probability", y = "predicted win probability")
+  geom_line(aes(x = lock.mean.prob, y = lock.bucket.win.prob, color = "Model Calibration")) + 
+  geom_line(aes(x = seq(0, 1, by = 0.05), y = seq(0, 1, by = 0.05), color = "Perfect Calibration")) +
+  geom_point(aes(x = lock.mean.prob, y = lock.bucket.win.prob, color = "Model Calibration", size = lock.size)) + 
+  labs(title = "Actual vs. Predicted Win Probability for Lock and Nettleton's Model", x = "Actual Win Probability", y = "Predicted Win Probability", size = "Size")
 scrapr.calibration.plot = ggplot() +
-  geom_line(aes(x = scrapr.mean.prob, y = scrapr.bucket.win.prob, color = "model calibration")) + 
-  geom_line(aes(x = seq(0, 1, by = 0.05), y = seq(0, 1, by = 0.05), color = "perfect calibration")) +
-  geom_point(aes(x = scrapr.mean.prob, y = scrapr.bucket.win.prob, color = "model calibration")) + 
-  labs(title = "Actual vs. predicted win probability for the nflscrapR model", x = "actual win probability", y = "predicted win probability")
+  geom_line(aes(x = scrapr.mean.prob, y = scrapr.bucket.win.prob, color = "Model Calibration")) + 
+  geom_line(aes(x = seq(0, 1, by = 0.05), y = seq(0, 1, by = 0.05), color = "Perfect Calibration")) +
+  geom_point(aes(x = scrapr.mean.prob, y = scrapr.bucket.win.prob, color = "Model Calibration", size = scrapr.size)) + 
+  labs(title = "Actual vs. Predicted Win Probability for the nflscrapR model", x = "Actual Win Probability", y = "Predicted Win Probability", size = "Size")
 
 my.calibration.plot 
 scrapr.calibration.plot
@@ -102,7 +111,9 @@ lock.calibration.plot
 ```
 
 
-I was also curious whether model predictions become more accurate as the season progresses. It seems like the indicators of team strength included in the model—DVOA ratings and point spread—would become more precise as information about a team trickles in over the course of the season.
+Our model actually appears to have been slightly underconfident during the 2017 season, though that may just be a quirk of the sample as only 256 unique games are featured and predictive perofrmance on different plays within the same game is inherently autocorrelated.   
+
+We were also curious whether model predictions become more accurate as the season progresses. It seems like the indicators of team strength included in the model—DVOA ratings and point spread—would become more precise as information about a team trickles in over the course of the season.
 
 ```{r resultsweekly, results="asis", echo=FALSE, cache = TRUE}
 my.mse = ifelse(test.set$pos.win == 0, (test.set$predictions)^2, (1-test.set$predictions)^2)
@@ -111,12 +122,14 @@ for(i in c(1:17)){
   my.mse.week[i] = mean(my.mse[which(test.set$week == i)])
 }
 ggplot() +
-  geom_line(linetype = "dashed", aes(x = seq(1, 17, by = 1), y = rep(mse.regular[1,1], 17), color = "overall model Brier score")) +
-  geom_point(aes(x = seq(1, 17, by = 1), y = my.mse.week, color = "weekly model Brier score")) + 
-  labs(title = "The model's Brier score by week", x = "week", y = "Brier score")
+  geom_line(linetype = "dashed", aes(x = seq(1, 17, by = 1), y = rep(mse.regular[1,1], 17), color = "Overall Brier Score")) +
+  geom_point(aes(x = seq(1, 17, by = 1), y = my.mse.week, color = "Weekly Brier Score")) + 
+  labs(title = "Brier Score by Week", x = "Week", y = "Brier Score")
 ```
 
-The plot seems mostly random, but Brier score values did skew a bit lower as the season progressed. A linear regression of Brier score with week as a predictor found week to have a slope of -0.0018. This may be something to look at in the future.
+The plot seems mostly random, but Brier score values did skew a bit lower as the season progressed. A linear regression of Brier score with week as a predictor found week to have a slope of -0.0018. This may be something to look at in the future.  
+
+We also included a comparison of predictions outputted by each of the models over the course of a 2017 game between the New Orleans Saints and Washington Redskins.
 
 ```{r examplegame, results="asis", echo=FALSE, cache = TRUE}
 #graph probability of new orleans winning for each model
@@ -143,4 +156,6 @@ ggplot() +
     caption = "Play by play data from nflscrapR"
   ) + theme_bw()
 ```
-In the game above, the Saints fell into an early hole before clawing back to force overtime on a touchdown with one minute left. They would win in overtime. This game seems instructive in terms of the strenghts of our model. We are more bullish on Saints winning than the other models from the get-go, likely because they were assumed by the model to be a much better team than the Redskins. Additionally, our model might be a bit more hesitant to shade too far towards teams that get out to early leads against a team with an offense like the Saints had in 2017, because of the increase in variance our model believes a potent offensive team to bring about. 
+In the game above, the Saints fell into an early hole before clawing back to force overtime on a touchdown with one minute left. They would win in overtime. This game seems instructive in terms of the strengths of our model. We are more bullish on Saints winning than the other models from the get-go, likely because they our model views them as a much better team than the Redskins, because they were favored by nine points heading into the game. Additionally, our model might be a bit more hesitant to shade too far towards teams that get out to early leads against a team with an offense as good as the one the Saints boasted in 2017^[Their offensive DVOA was 22.1% heading into the game, ranking them second in the league], because of the increase in variance our model believes a potent offensive team to bring about.
+
+It must be noted that our model has a bit of a leg up on the Lock and Nettleton (2014) model because it was trained on more recent data, and that the model created by Horowitz, Ventura and Yurko (2018) is not fully optimized for predicting win probability because it omits indicators of team strength. Still, the performance of our model is very encouraging. In the future we hope to compare its performance against proprietary models developed by other outlets.

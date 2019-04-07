@@ -71,7 +71,7 @@ for(i in c(1:18)){
 
 ggplot() +
   geom_line(aes(x = mean.time, y = mean.score.change), color = "steelblue") +
-  labs(x = "Seconds Remaining", y = "Average Score Change", title = "Average Score Change vs. Seconds Remaining", subtitle = "2010 to 2015 NFL data")
+  labs(x = "Seconds Remaining", y = "Average Change in Score Differential", title = "Average Change in Score Differential vs. Seconds Remaining", subtitle = "2010 to 2015 NFL data")
 ```
 
 We also take a look at the probability of the next scoring play being of a given type based on the yardline the ball is currently positioned at, this time for all first down plays. This will give an idea of whether the relationship between yard line and next scoring event is linear for different events.  

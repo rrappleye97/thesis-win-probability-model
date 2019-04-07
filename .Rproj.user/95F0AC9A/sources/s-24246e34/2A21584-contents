@@ -2,7 +2,7 @@
 
 `r if(!knitr:::is_latex_output()) '# (APPENDIX) Appendix {-}'` 
 
-# The First Appendix
+# Appendix
 
 ## QB Model  
 A linear model was deemed sufficient for predicting a the PFF grade for a quarterback in a given seasons using past data. For a given quarterback and season combination $i$, we have:

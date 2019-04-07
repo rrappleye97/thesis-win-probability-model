@@ -5,13 +5,15 @@
     "dirty" : false,
     "encoding" : "UTF-8",
     "folds" : "",
-    "hash" : "27096803",
+    "hash" : "0",
     "id" : "6812DEFD",
-    "lastKnownWriteTime" : 1554421554,
-    "last_content_update" : 1554421554,
+    "lastKnownWriteTime" : 1554492960,
+    "last_content_update" : 1554492960130,
     "path" : "~/thesis-win-probability-model/index/01-literature-review.Rmd",
     "project_path" : "index/01-literature-review.Rmd",
     "properties" : {
+        "cursorPosition" : "39,314",
+        "scrollLine" : "0"
     },
     "read_only" : false,
     "read_only_alternatives" : [
