@@ -138,10 +138,10 @@ TimeSecs = rep(was.no.game$TimeSecs, 3)
 predictions = c(ifelse(was.no.game$posteam == "NO", was.no.game$predictions, 1-was.no.game$predictions),
   ifelse(was.no.game$posteam == "NO", was.no.game$Win_Prob, 1-was.no.game$Win_Prob),
   ifelse(was.no.game$posteam == "NO", was.no.game$lock.nettleton.prob, 1-was.no.game$lock.nettleton.prob))
-model = c(rep("Our model", nrow(was.no.game)), rep("nflscrapR model", nrow(was.no.game)), rep("Lock and Nettleton model", nrow(was.no.game)))
+model = c(rep("Our Model", nrow(was.no.game)), rep("nflscrapR Model", nrow(was.no.game)), rep("Lock and Nettleton Model", nrow(was.no.game)))
 
-suppressWarnings(ggplot() +
-  geom_line(size = 1, aes(x = TimeSecs, y = predictions, color = model)) +
+ggplot() +
+  geom_line(size = 1, aes(x = TimeSecs, y = predictions, color = model), na.rm = T) +
   geom_hline(yintercept = 0.5, color = "gray", linetype = "dashed") +
   scale_x_reverse(breaks = seq(0, 3600, 300)) + 
   geom_vline(xintercept = 900, linetype = "dashed", black) + 
@@ -154,7 +154,7 @@ suppressWarnings(ggplot() +
     title = "Win Probability of New Orleans Saints During a Game",
     subtitle = "Washington Redskins vs. New Orleans Saints",
     caption = "Play by play data from nflscrapR"
-  ) + theme_bw())
+  ) + theme_bw()
 ```
 In the game above, the Saints fell into an early hole before clawing back to force overtime on a touchdown with one minute left. They would win in overtime. This game seems instructive in terms of the strengths of our model. We are more bullish on Saints winning than the other models from the get-go, likely because they our model views them as a much better team than the Redskins, because they were favored by nine points heading into the game. Additionally, our model might be a bit more hesitant to shade too far towards teams that get out to early leads against a team with an offense as good as the one the Saints boasted in 2017^[Their offensive DVOA was 22.1% heading into the game, ranking them second in the league], because of the increase in variance our model believes a potent offensive team to bring about.
 
