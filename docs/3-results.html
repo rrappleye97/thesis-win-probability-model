@@ -82,11 +82,12 @@
 <li class="chapter" data-level="A" data-path="A-appendix.html"><a href="A-appendix.html"><i class="fa fa-check"></i><b>A</b> Appendix</a><ul>
 <li class="chapter" data-level="A.1" data-path="A-appendix.html"><a href="A-appendix.html#qb-model"><i class="fa fa-check"></i><b>A.1</b> QB Model</a></li>
 <li class="chapter" data-level="A.2" data-path="A-appendix.html"><a href="A-appendix.html#two-point-chart"><i class="fa fa-check"></i><b>A.2</b> Two Point Chart</a></li>
-<li class="chapter" data-level="A.3" data-path="A-appendix.html"><a href="A-appendix.html#clock-stop-gbm-to-predict-p_stopped"><i class="fa fa-check"></i><b>A.3</b> Clock Stop GBM to Predict <span class="math inline">\(p_{stopped}\)</span></a></li>
+<li class="chapter" data-level="A.3" data-path="A-appendix.html"><a href="A-appendix.html#gbm-for-p_stopped"><i class="fa fa-check"></i><b>A.3</b> GBM for <span class="math inline">\(P_{stopped}\)</span></a></li>
 <li class="chapter" data-level="A.4" data-path="A-appendix.html"><a href="A-appendix.html#downs-outcome-formulas"><i class="fa fa-check"></i><b>A.4</b> Downs Outcome Formulas</a></li>
 <li class="chapter" data-level="A.5" data-path="A-appendix.html"><a href="A-appendix.html#gbm-for-p_penaltyreplay"><i class="fa fa-check"></i><b>A.5</b> GBM for <span class="math inline">\(P_{penaltyReplay}\)</span></a></li>
 <li class="chapter" data-level="A.6" data-path="A-appendix.html"><a href="A-appendix.html#gbms-for-p_score"><i class="fa fa-check"></i><b>A.6</b> GBMs for <span class="math inline">\(P_{score}\)</span></a></li>
-<li class="chapter" data-level="A.7" data-path="A-appendix.html"><a href="A-appendix.html#linear-models-for-delta-field-position-outcome_g"><i class="fa fa-check"></i><b>A.7</b> Linear Models for <span class="math inline">\(\Delta field position | outcome_{g}\)</span></a></li>
+<li class="chapter" data-level="A.7" data-path="A-appendix.html"><a href="A-appendix.html#linear-models-for-delta-field-position-outcome_i"><i class="fa fa-check"></i><b>A.7</b> Linear Models for <span class="math inline">\(\Delta \: field \: position | outcome_{i^*}\)</span></a></li>
+<li class="chapter" data-level="A.8" data-path="A-appendix.html"><a href="A-appendix.html#residual-plots-for-delta-field-position-outcome_i"><i class="fa fa-check"></i><b>A.8</b> Residual Plots for <span class="math inline">\(\Delta \: field \: position | outcome_{i^*}\)</span></a></li>
 </ul></li>
 <li class="chapter" data-level="" data-path="references.html"><a href="references.html"><i class="fa fa-check"></i>References</a></li>
 <li class="divider"></li>
@@ -244,7 +245,7 @@
 <p>We also included a comparison of predictions outputted by each of the models over the course of a 2017 game between the New Orleans Saints and Washington Redskins.</p>
 <p><img src="thesis_files/figure-html/examplegame-1.png" width="672" style="display: block; margin: auto;" />
 In the game above, the Saints fell into an early hole before clawing back to force overtime on a touchdown with one minute left. They would win in overtime. This game seems instructive in terms of the strengths of our model. We are more bullish on Saints winning than the other models from the get-go, likely because they our model views them as a much better team than the Redskins, because they were favored by nine points heading into the game. Additionally, our model might be a bit more hesitant to shade too far towards teams that get out to early leads against a team with an offense as good as the one the Saints boasted in 2017<a href="#fn31" class="footnote-ref" id="fnref31"><sup>31</sup></a>, because of the increase in variance our model believes a potent offensive team to bring about.</p>
-<p>It must be noted that our model has a bit of a leg up on the Lock and Nettleton (2014) model because it was trained on more recent data, and that the model created by Horowitz, Ventura and Yurko (2018) is not fully optimized for predicting win probability because it omits indicators of team strength. Still, the performance of our model is very encouraging. In the future we hope to compare its performance against proprietary models developed by other outlets.</p>
+<p>It must be noted that our model has a bit of a leg up on the Lock and Nettleton (2014) model because it was trained on more recent data, and that the model created by Horowitz, Ventura and Yurko (2018) is (purposefully) not fully optimized for predicting win probability because it omits indicators of team strength. Still, the performance of our model is very encouraging. In the future we hope to compare its performance against proprietary models developed by other outlets.</p>
 
 </div>
 <div class="footnotes">

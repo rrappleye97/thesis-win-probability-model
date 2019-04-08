@@ -24,8 +24,8 @@ kable(scores,
   booktabs = TRUE)
 ```
 
-## Clock Stop GBM to Predict $p_{stopped}$ 
-This GBM predicts the probability of the clock stopped on a given play by using the following variables where the value for each variable is the value for the variable at the previous kickoff to account for that face that this model has to predict the probability of the clock stopping not just for the current play but also for some number of plays in the future despite being unable to update other information.
+## GBM for $P_{stopped}$ 
+This GBM predicts the probability of the clock stopped on a given play by using the variables listed in the table below. The value for each variable is the value for the variable at the previous kickoff to account for that face that this model has to predict the probability of the clock stopping not just for the current play but also for some number of plays in the future despite being unable to update other information. The model uses the shrinkage parameter $l = 0.02$, an interactions depth of two and $1000$ trees.
 ```{r clockstop GBM, results="asis", echo=FALSE, cache = TRUE}
 vars = c("Clock Will Stop", "Number of Plays Until the Next Scoring Event", "Timeout Adjusted Time Remaining in the Half", "The Comeback Score")
 vars = as.data.frame(vars)
@@ -41,7 +41,7 @@ For an initial game state $i$, when $t_i > 300$ & !$(1800 < t_i <= 1980)$ a mult
 
 $\delta_ix = \beta_{xint} +\beta_{xpos_{o}}pos_{o_i} + \beta_{xde\hspace{-0.1em}f_{o}}de\hspace{-0.1em}f_{d_i} +\beta_{xpos_{{qb}}}pos_{{qb}_i} + \beta_{xydstogo}ydstogo_i + \beta_{xyrd_{group}}yrd_{group_{i}}$
 
-Each GBM uses the following variables as well as a shrinkage parameter $l = 0.02$, an interaction depth of two, and 1000 trees. The data on which they are trained is the only difference between the GBMs.
+Each GBM uses the following variables as well as a shrinkage parameter $l = 0.02$, an interaction depth of two, and $1000$ trees. The data on which they are trained is the only difference between the GBMs.
 
 ```{r downs gbms, results="asis", echo=FALSE, cache = TRUE}
 vars = c("Offensive DVOA for the Team with the Ball", "Defensive DVOA for the Team on Defense", "Projected QB Grade for the Offensive Team", "Yards to go for a First Down", "Score Differential", "Timeout Adjusted Time Remaining in the Half", "Yards from the End Zone Bucketed in Ten Yard Increments")
@@ -75,7 +75,7 @@ The GBM that predicts $P_{defTD}\:|\:Punt$ utilizes a shrinkage parameter $l = 0
 
 The GBM that predicts $P_{Make}\:|\:FG Attempt$ depends only on the square root of yards from the end zone for the team kicking the field goal, as does the GBM that predicts the $P_{defTD}\:|\:FG Block$. Both have $l = 0.01$ and $ntrees = 1000$, though the field goal make GBM uses an interaction depth of one while the field goal block GBM uses an interaction depth of two. 
 
-## Linear Models for $\Delta field position | outcome_{g}$
+## Linear Models for $\Delta \: field \: position | outcome_{i^*}$
 
 **Conversion**  
 For first and second down all models for change in field position for conversions have the same formula. A given model $m$ has formula as follows. A reminder that $yrds$ is the field position of the offensive team:
@@ -124,6 +124,80 @@ $y_{i} = \beta_{int} + \beta_{1}ydstogo_i + \beta_{2}def_{d_i} + \beta_{3}\sqrt{
 On fourth down the model is:  
 $y_{i} = \beta_{int} + \beta_{1}\sqrt{yrds_i} + \epsilon_{i}$   
 
+## Residual Plots for $\Delta \: field \: position | outcome_{i^*}$
+
+A reminder that when sampling from $\mathcal N(\Delta \: field \: position, \sigma^{2}_{\epsilon})$, values that would lead to incoherent game stats are rejected. This fixes issues with the lack of normality for the residual distributions of $\Delta \: field \: position$ when the sampled outcome $outcome_{i^*}$ is either a conversion or a turnover on downs.  
+
+```{r residuals, results="asis", echo=FALSE, cache = TRUE}
+converted.yrds.gained.models = readRDS(file = "/home/guest/thesis-win-probability-model/final-models/converted.yrds.gained.models.Rda")
+downs.turnover.yrds.gained.models = readRDS(file = "/home/guest/thesis-win-probability-model/final-models/downs.turnover.yrds.gained.models.Rda")
+gridExtra::grid.arrange(
+ggplot() +
+  geom_density(aes(x = residuals(converted.yrds.gained.models[[1]][[1]])), color = "darkred") + 
+  labs(title = "Conversion Residuals", x = "Residuals", y = "Density", subtitle = "First down and fewer than ten yards to go"),
+ggplot() +
+  geom_density(aes(x = residuals(converted.yrds.gained.models[[1]][[2]])), color = "darkred") + 
+  labs(title = "Conversion Residuals", x = "Residuals", y = "Density", subtitle = "First down and greater than ten yards to go"), 
+ggplot() +
+  geom_density(aes(x = residuals(converted.yrds.gained.models[[2]])), color = "darkred") + 
+  labs(title = "Conversion Residuals", x = "Residuals", y = "Density", subtitle = "Second down"),
+ggplot() +
+  geom_density(aes(x = residuals(converted.yrds.gained.models[[3]])), color = "darkred") + 
+  labs(title = "Conversion Residuals", x = "Residuals", y = "Density", subtitle = "Third down"), ncol = 2)
+
+fg.yrds.gained.models = readRDS(file = "/home/guest/thesis-win-probability-model/final-models/fg.yrds.gained.models.Rda")
+gridExtra::grid.arrange(
+ggplot() +
+  geom_density(aes(x = residuals(converted.yrds.gained.models[[4]])), color = "darkred") + 
+  labs(title = "Conversion Residuals", x = "Residuals", y = "Density", subtitle = "Fourth down"),
+ggplot() +
+  geom_density(aes(x = residuals(fg.yrds.gained.models[[1]])), color = "darkgreen") + 
+  labs(title = "Missed Field Goals Residuals", x = "Residuals", y = "Density", subtitle = "First down through third down"),
+ggplot() +
+  geom_density(aes(x = residuals(fg.yrds.gained.models[[2]])), color = "darkgreen") + 
+  labs(title = "Blocked Field Goals Residuals", x = "Residuals", y = "Density", subtitle = "First down through third down"),
+ggplot() +
+  geom_density(aes(x = residuals(fg.yrds.gained.models[[3]])), color = "darkgreen") + 
+  labs(title = "Blocked Field Goals Residuals", x = "Residuals", y = "Density", subtitle = "Fourth down"), ncol = 2)
+
+penalty.converted.yrds.gained.models = readRDS(file = "/home/guest/thesis-win-probability-model/final-models/penalty.converted.yrds.gained.models.Rda")
+gridExtra::grid.arrange(
+  ggplot() +
+    geom_density(aes(x = residuals(penalty.converted.yrds.gained.models[[1]])), color = "sienna4") +
+    labs(title = "Conversions by Penalty Residuals", x = "Residuals", y = "Density", 
+    subtitle = "First down through third down"),
+  ggplot() +
+    geom_density(aes(x = residuals(penalty.converted.yrds.gained.models[[2]])), color = "sienna4") +
+    labs(title = "Conversions by Penalty Residuals", x = "Residuals", y = "Density", 
+    subtitle = "Fourth down"),
+  ggplot() +
+  geom_density(aes(x = residuals(downs.turnover.yrds.gained.models[[1]])), color = "darkblue") + 
+  labs(title = "Turnover on Downs Residuals", x = "Residuals", y = "Density", 
+  subtitle = "First down through third down"),
+ggplot() +
+  geom_density(aes(x = residuals(downs.turnover.yrds.gained.models[[2]])), color = "darkblue") + 
+  labs(title = "Turnover on Downs Residuals", x = "Residuals", y = "Density", 
+    subtitle = "Fourth down"), ncol = 2)
+
+punt.yrds.gained.models = readRDS(file = "/home/guest/thesis-win-probability-model/final-models/punts.yrds.gained.models.Rda")
+turnover.yrds.gained.models = readRDS(file = "/home/guest/thesis-win-probability-model/final-models/turnovers.yrds.gained.models.Rda")
+
+gridExtra::grid.arrange(
+ggplot() +
+  geom_density(aes(x = residuals(punt.yrds.gained.models[[1]])), color = "purple") + 
+  labs(title = "Punts Residuals", x = "Residuals", y = "Density", 
+  subtitle = "First down through third down"),
+ggplot() +
+  geom_density(aes(x = residuals(punt.yrds.gained.models[[2]])), color = "purple") + 
+  labs(title = "Punts Residuals", x = "Residuals", y = "Density", subtitle = "Fourth down"),
+ggplot() +
+  geom_density(aes(x = residuals(turnover.yrds.gained.models[[1]])), color = "darkorange") + 
+  labs(title = "Turnovers Residuals", x = "Residuals", y = "Density", 
+  subtitle = "First down through third down"),
+ggplot() +
+  geom_density(aes(x = residuals(turnover.yrds.gained.models[[2]])), color = "darkorange") + 
+  labs(title = "Turnovers Residuals", x = "Residuals", y = "Density", subtitle = "Fourth down"), ncol = 2)
+```
 
 
 
