@@ -68,7 +68,7 @@
 <li class="chapter" data-level="" data-path="literature-review.html"><a href="literature-review.html"><i class="fa fa-check"></i>Literature Review</a></li>
 <li class="chapter" data-level="1" data-path="1-data.html"><a href="1-data.html"><i class="fa fa-check"></i><b>1</b> Data</a></li>
 <li class="chapter" data-level="2" data-path="2-methodology.html"><a href="2-methodology.html"><i class="fa fa-check"></i><b>2</b> Methodology</a><ul>
-<li class="chapter" data-level="2.1" data-path="2-methodology.html"><a href="2-methodology.html#modeling-win-probability-on-kickoffs-and-point-after-attempts"><i class="fa fa-check"></i><b>2.1</b> Modeling Win Probability on Kickoffs and Point After Attempts</a></li>
+<li class="chapter" data-level="2.1" data-path="2-methodology.html"><a href="2-methodology.html#modeling-win-probability-on-kickoffs-and-pats"><i class="fa fa-check"></i><b>2.1</b> Modeling Win Probability on Kickoffs and PATs</a></li>
 <li class="chapter" data-level="2.2" data-path="2-methodology.html"><a href="2-methodology.html#modeling-win-probability-on-first-and-ten"><i class="fa fa-check"></i><b>2.2</b> Modeling Win Probability on First and Ten</a></li>
 <li class="chapter" data-level="2.3" data-path="2-methodology.html"><a href="2-methodology.html#modeling-win-probability-in-other-scenarios"><i class="fa fa-check"></i><b>2.3</b> Modeling Win Probability in Other Scenarios</a></li>
 <li class="chapter" data-level="2.4" data-path="2-methodology.html"><a href="2-methodology.html#reasoning-behind-modeling-methodology"><i class="fa fa-check"></i><b>2.4</b> Reasoning Behind Modeling Methodology</a></li>
@@ -86,8 +86,8 @@
 <li class="chapter" data-level="A.4" data-path="A-appendix.html"><a href="A-appendix.html#downs-outcome-formulas"><i class="fa fa-check"></i><b>A.4</b> Downs Outcome Formulas</a></li>
 <li class="chapter" data-level="A.5" data-path="A-appendix.html"><a href="A-appendix.html#gbm-for-p_penaltyreplay"><i class="fa fa-check"></i><b>A.5</b> GBM for <span class="math inline">\(P_{penaltyReplay}\)</span></a></li>
 <li class="chapter" data-level="A.6" data-path="A-appendix.html"><a href="A-appendix.html#gbms-for-p_score"><i class="fa fa-check"></i><b>A.6</b> GBMs for <span class="math inline">\(P_{score}\)</span></a></li>
-<li class="chapter" data-level="A.7" data-path="A-appendix.html"><a href="A-appendix.html#linear-models-for-delta-field-position-outcome_i"><i class="fa fa-check"></i><b>A.7</b> Linear Models for <span class="math inline">\(\Delta \: field \: position | outcome_{i^*}\)</span></a></li>
-<li class="chapter" data-level="A.8" data-path="A-appendix.html"><a href="A-appendix.html#residual-plots-for-delta-field-position-outcome_i"><i class="fa fa-check"></i><b>A.8</b> Residual Plots for <span class="math inline">\(\Delta \: field \: position | outcome_{i^*}\)</span></a></li>
+<li class="chapter" data-level="A.7" data-path="A-appendix.html"><a href="A-appendix.html#linear-models-for-delta-field-position_i-outcome_i"><i class="fa fa-check"></i><b>A.7</b> Linear Models for <span class="math inline">\(\Delta \: field \: position_{i^*} | outcome_{i^*}\)</span></a></li>
+<li class="chapter" data-level="A.8" data-path="A-appendix.html"><a href="A-appendix.html#residual-plots-for-delta-field-position_i-outcome_i"><i class="fa fa-check"></i><b>A.8</b> Residual Plots for <span class="math inline">\(\Delta \: field \: position_{i^*} | outcome_{i^*}\)</span></a></li>
 </ul></li>
 <li class="chapter" data-level="" data-path="references.html"><a href="references.html"><i class="fa fa-check"></i>References</a></li>
 <li class="divider"></li>
@@ -241,8 +241,8 @@
 <p>The GBM that predicts <span class="math inline">\(P_{defTD}\:|\:Punt\)</span> utilizes a shrinkage parameter <span class="math inline">\(l = 0.005\)</span>, an interaction depth of two and 1000 trees. It is fitted with only three variables—the yards from the end zone for the team punting and the special teams DVOAs for both teams.</p>
 <p>The GBM that predicts <span class="math inline">\(P_{Make}\:|\:FG Attempt\)</span> depends only on the square root of yards from the end zone for the team kicking the field goal, as does the GBM that predicts the <span class="math inline">\(P_{defTD}\:|\:FG Block\)</span>. Both have <span class="math inline">\(l = 0.01\)</span> and <span class="math inline">\(ntrees = 1000\)</span>, though the field goal make GBM uses an interaction depth of one while the field goal block GBM uses an interaction depth of two.</p>
 </div>
-<div id="linear-models-for-delta-field-position-outcome_i" class="section level2">
-<h2><span class="header-section-number">A.7</span> Linear Models for <span class="math inline">\(\Delta \: field \: position | outcome_{i^*}\)</span></h2>
+<div id="linear-models-for-delta-field-position_i-outcome_i" class="section level2">
+<h2><span class="header-section-number">A.7</span> Linear Models for <span class="math inline">\(\Delta \: field \: position_{i^*} | outcome_{i^*}\)</span></h2>
 <p><strong>Conversion</strong><br />
 For first and second down all models for change in field position for conversions have the same formula. A given model <span class="math inline">\(m\)</span> has formula as follows. A reminder that <span class="math inline">\(yrds\)</span> is the field position of the offensive team:
 <span class="math inline">\(y_{mi} = \beta_{mint} + \beta_{m1}ydstogo_i + \beta_{m2}\sqrt{yrds_i} + \beta_{m3}pos_{o_i} + \beta_{m4}def_{d_i} + \epsilon_{mi}\)</span></p>
@@ -276,9 +276,9 @@ The model for change in field position on missed field goals given the current d
 <p>On fourth down the model is:<br />
 <span class="math inline">\(y_{i} = \beta_{int} + \beta_{1}\sqrt{yrds_i} + \epsilon_{i}\)</span></p>
 </div>
-<div id="residual-plots-for-delta-field-position-outcome_i" class="section level2">
-<h2><span class="header-section-number">A.8</span> Residual Plots for <span class="math inline">\(\Delta \: field \: position | outcome_{i^*}\)</span></h2>
-<p>A reminder that when sampling from <span class="math inline">\(\mathcal N(\Delta \: field \: position, \sigma^{2}_{\epsilon})\)</span>, values that would lead to incoherent game stats are rejected. This fixes issues with the lack of normality for the residual distributions of <span class="math inline">\(\Delta \: field \: position\)</span> when the sampled outcome <span class="math inline">\(outcome_{i^*}\)</span> is either a conversion or a turnover on downs.</p>
+<div id="residual-plots-for-delta-field-position_i-outcome_i" class="section level2">
+<h2><span class="header-section-number">A.8</span> Residual Plots for <span class="math inline">\(\Delta \: field \: position_{i^*} | outcome_{i^*}\)</span></h2>
+<p>A reminder that when sampling from <span class="math inline">\(\mathcal N(\Delta \: field \: position, \sigma^{2}_{\epsilon})\)</span>, values that would lead to incoherent game stats are rejected. This fixes issues with the lack of normality for the residual distributions of <span class="math inline">\(\Delta \: field \: position_{i^*}\)</span> when the sampled outcome <span class="math inline">\(outcome_{i^*}\)</span> is either a conversion or a turnover on downs.</p>
 <p><img src="thesis_files/figure-html/residuals-1.png" width="672" style="display: block; margin: auto;" /><img src="thesis_files/figure-html/residuals-2.png" width="672" style="display: block; margin: auto;" /><img src="thesis_files/figure-html/residuals-3.png" width="672" style="display: block; margin: auto;" /><img src="thesis_files/figure-html/residuals-4.png" width="672" style="display: block; margin: auto;" /></p>
 
 <!--

@@ -14,13 +14,9 @@ This forces the model to gain a sense of the interaction between score and time 
 **Paine et al. (2019)**  
 PFR models change in score differential from the current game state until the end of the game as:  
   
-  <center>
-  
   $\Delta score \sim \mathcal{N}$($\mu,\,\sigma^{2}$)\ where  
-	$\mu = score$ $differential + EPA + point$ $spread * (seconds$ $remaining/3600)$ and  
+	$\mu = score \: differential + EPA + point \: spread * (seconds \: remaining/3600)$ and  
   $\sigma^{2} = 13.45$
-  
-  </center>
 
 This allows PFR to leverage the fact that any draw from this distribution that is greater than zero corresponds to a win for the team possessing the ball and any draw that is less than zero corresponds to a loss. PFR is vague about how EPA is modeled, mentioning only that it is meant to capture the “expected average scoring consequences” associated with the down, distance to first down, yard line and time left of the game state. Though PFR’s model is relatively barebones and the page describing it does not really outline how PFR handles game states with five minutes or fewer remaining—the point at which they presume the assumption that change in score follows a normal distribution breaks down—the trick PFR uses to apply a normal distribution to the problem of win probability prediction is one that we will borrow. We also utilize a scaled point spread to help inform the $\mu$ parameter of our normal distribution.
 

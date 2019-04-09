@@ -75,7 +75,7 @@ The GBM that predicts $P_{defTD}\:|\:Punt$ utilizes a shrinkage parameter $l = 0
 
 The GBM that predicts $P_{Make}\:|\:FG Attempt$ depends only on the square root of yards from the end zone for the team kicking the field goal, as does the GBM that predicts the $P_{defTD}\:|\:FG Block$. Both have $l = 0.01$ and $ntrees = 1000$, though the field goal make GBM uses an interaction depth of one while the field goal block GBM uses an interaction depth of two. 
 
-## Linear Models for $\Delta \: field \: position | outcome_{i^*}$
+## Linear Models for $\Delta \: field \: position_{i^*} | outcome_{i^*}$
 
 **Conversion**  
 For first and second down all models for change in field position for conversions have the same formula. A given model $m$ has formula as follows. A reminder that $yrds$ is the field position of the offensive team:
@@ -124,9 +124,9 @@ $y_{i} = \beta_{int} + \beta_{1}ydstogo_i + \beta_{2}def_{d_i} + \beta_{3}\sqrt{
 On fourth down the model is:  
 $y_{i} = \beta_{int} + \beta_{1}\sqrt{yrds_i} + \epsilon_{i}$   
 
-## Residual Plots for $\Delta \: field \: position | outcome_{i^*}$
+## Residual Plots for $\Delta \: field \: position_{i^*} | outcome_{i^*}$
 
-A reminder that when sampling from $\mathcal N(\Delta \: field \: position, \sigma^{2}_{\epsilon})$, values that would lead to incoherent game stats are rejected. This fixes issues with the lack of normality for the residual distributions of $\Delta \: field \: position$ when the sampled outcome $outcome_{i^*}$ is either a conversion or a turnover on downs.  
+A reminder that when sampling from $\mathcal N(\Delta \: field \: position, \sigma^{2}_{\epsilon})$, values that would lead to incoherent game stats are rejected. This fixes issues with the lack of normality for the residual distributions of $\Delta \: field \: position_{i^*}$ when the sampled outcome $outcome_{i^*}$ is either a conversion or a turnover on downs.  
 
 ```{r residuals, results="asis", echo=FALSE, cache = TRUE}
 converted.yrds.gained.models = readRDS(file = "/home/guest/thesis-win-probability-model/final-models/converted.yrds.gained.models.Rda")
@@ -164,11 +164,11 @@ penalty.converted.yrds.gained.models = readRDS(file = "/home/guest/thesis-win-pr
 gridExtra::grid.arrange(
   ggplot() +
     geom_density(aes(x = residuals(penalty.converted.yrds.gained.models[[1]])), color = "sienna4") +
-    labs(title = "Conversions by Penalty Residuals", x = "Residuals", y = "Density", 
+    labs(title = "Conversion by Penalty Residuals", x = "Residuals", y = "Density", 
     subtitle = "First down through third down"),
   ggplot() +
     geom_density(aes(x = residuals(penalty.converted.yrds.gained.models[[2]])), color = "sienna4") +
-    labs(title = "Conversions by Penalty Residuals", x = "Residuals", y = "Density", 
+    labs(title = "Conversion by Penalty Residuals", x = "Residuals", y = "Density", 
     subtitle = "Fourth down"),
   ggplot() +
   geom_density(aes(x = residuals(downs.turnover.yrds.gained.models[[1]])), color = "darkblue") + 
