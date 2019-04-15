@@ -111,7 +111,7 @@
             <section class="normal" id="section-">
 <div id="results" class="section level1">
 <h1><span class="header-section-number">Chapter 3</span> Results</h1>
-<p>Model performance is tested by re-training each sub-model on the entire training set<a href="#fn29" class="footnote-ref" id="fnref29"><sup>29</sup></a> and evaluating the performance of the models when the protocol described in Chapter 2 is used. Results are then are then compared against the other two models for which we have access to 2017 predictions—the models developed by Lock and Nettleton (2014) and Horowitz, Ventura, and Yurko (2018). The two loss functions we use to measure model performance are Brier score, the mean of the squared distance between each prediction and the corresponding outcome, and log loss, the mean of the <span class="math inline">\(log(1 - distance)\)</span> for each prediction and the corresponding outcome.</p>
+<p>Model performance is tested by re-training each sub-model on the entire training set<a href="#fn30" class="footnote-ref" id="fnref30"><sup>30</sup></a> and evaluating the performance of the models when the protocol described in Chapter 2 is used. Results are then are then compared against the other two models for which we have access to 2017 predictions—the models developed by Lock and Nettleton (2014) and Horowitz, Ventura, and Yurko (2018). The two loss functions we use to measure model performance are Brier score, the mean of the squared distance between each prediction and the corresponding outcome, and log loss, the mean of the <span class="math inline">\(log(1 - distance)\)</span> for each prediction and the corresponding outcome.</p>
 <table>
 <caption><span id="tab:resultsoverall">Table 3.1: </span>Brier Score by Model</caption>
 <thead>
@@ -150,7 +150,7 @@
 </tr>
 </tbody>
 </table>
-<p>We can also see that, as expected, the model generally performs better as the game progresses with the exception of overtime<a href="#fn30" class="footnote-ref" id="fnref30"><sup>30</sup></a>. Interestingly, each model tested has a Brier score above 0.25 for the overtime period, indicating that, at least for the 2017 season, each model would be better off classifying every overtime game as a coin flip.</p>
+<p>We can also see that, as expected, the model generally performs better as the game progresses with the exception of overtime<a href="#fn31" class="footnote-ref" id="fnref31"><sup>31</sup></a>. Interestingly, each model tested has a Brier score above 0.25 for the overtime period, indicating that, at least for the 2017 season, each model would be better off classifying every overtime game as a coin flip.</p>
 <table>
 <caption><span id="tab:resultsquarter">Table 3.2: </span>Brier Score by Quarter</caption>
 <thead>
@@ -244,16 +244,16 @@
 <p>The plot seems mostly random, but Brier score values did skew a bit lower as the season progressed. A linear regression of Brier score with week as a predictor found week to have a slope of -0.0018. This may be something to look at in the future.</p>
 <p>We also included a comparison of predictions outputted by each of the models over the course of a 2017 game between the New Orleans Saints and Washington Redskins.</p>
 <p><img src="thesis_files/figure-html/examplegame-1.png" width="672" style="display: block; margin: auto;" />
-The Saints fell into an early hole before clawing back to force overtime on a touchdown with one minute left. They would win in overtime. This game seems instructive in terms of the strengths of our model. We are more bullish on Saints winning than the other models from the get-go, likely because they our model views them as a much better team than the Redskins, because they were favored by nine points heading into the game. Additionally, our model might be a bit more hesitant to shade too far towards teams that get out to early leads against a team with an offense as good as the one the Saints boasted in 2017<a href="#fn31" class="footnote-ref" id="fnref31"><sup>31</sup></a>, because of the increase in variance our model believes a potent offensive team to bring about.</p>
+The Saints fell into an early hole before clawing back to force overtime on a touchdown with one minute left. They would win in overtime. This game seems instructive in terms of the strengths of our model. We are more bullish on Saints winning than the other models from the get-go, likely because they our model views them as a much better team than the Redskins, because they were favored by nine points heading into the game. Additionally, our model might be a bit more hesitant to shade too far towards teams that get out to early leads against a team with an offense as good as the one the Saints boasted in 2017<a href="#fn32" class="footnote-ref" id="fnref32"><sup>32</sup></a>, because of the increase in variance our model believes a potent offensive team to bring about.</p>
 <p>It must be noted that our model has a bit of a leg up on the Lock and Nettleton (2014) model because it was trained on more recent data, and that the model created by Horowitz, Ventura and Yurko (2018) is (purposefully) not fully optimized for predicting win probability because it omits indicators of team strength. Still, the performance of our model is very encouraging. In the future we hope to compare its performance against proprietary models developed by other outlets.</p>
 
 </div>
 <div class="footnotes">
 <hr />
-<ol start="29">
-<li id="fn29"><p>The training set is comprised of all the 2010-2016 data. During the tuning process each model was trained only on 2010-2015 data.<a href="3-results.html#fnref29" class="footnote-back">↩</a></p></li>
-<li id="fn30"><p>There is a ceiling to how well even an all-knowing model could perform when predicting overtime because the games are so close to coin flips.<a href="3-results.html#fnref30" class="footnote-back">↩</a></p></li>
-<li id="fn31"><p>Their offensive DVOA was 22.1% heading into the game, ranking them second in the league<a href="3-results.html#fnref31" class="footnote-back">↩</a></p></li>
+<ol start="30">
+<li id="fn30"><p>The training set is comprised of all the 2010-2016 data. During the tuning process each model was trained only on 2010-2015 data.<a href="3-results.html#fnref30" class="footnote-back">↩</a></p></li>
+<li id="fn31"><p>There is a ceiling to how well even an all-knowing model could perform when predicting overtime because the games are so close to coin flips.<a href="3-results.html#fnref31" class="footnote-back">↩</a></p></li>
+<li id="fn32"><p>Their offensive DVOA was 22.1% heading into the game, ranking them second in the league<a href="3-results.html#fnref32" class="footnote-back">↩</a></p></li>
 </ol>
 </div>
             </section>

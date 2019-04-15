@@ -698,11 +698,11 @@ mse = mean(abs((pred - data.win.test$score.change[data.win.test$TimeSecs > 600])
 #make model for std dev
 data.win.train$deviation.from.mu = rep(NA, nrow(data.win.train))
 data.win.train$deviation.from.mu[data.win.train$TimeSecs > 600] = 
-  data.win.train$score.change[data.win.train$TimeSecs > 600]  + predict(mu, data.win.train[data.win.train$TimeSecs > 600,])
+  data.win.train$score.change[data.win.train$TimeSecs > 600]  - predict(mu, data.win.train[data.win.train$TimeSecs > 600,])
 
 data.win.test$deviation.from.mu = rep(NA, nrow(data.win.test))
 data.win.test$deviation.from.mu[data.win.test$TimeSecs > 600] = 
-  data.win.test$score.change[data.win.test$TimeSecs > 600]  + predict(mu, data.win.test[data.win.test$TimeSecs > 600,])
+  data.win.test$score.change[data.win.test$TimeSecs > 600]  - predict(mu, data.win.test[data.win.test$TimeSecs > 600,])
 
 sigma = lm(abs(deviation.from.mu) ~ sqrt(TimeSecs) + TimeSecs + pos.o.dvoa + def.o.dvoa + pos.d.dvoa + def.d.dvoa + abs(score.diff) + pos.qb.grade*score.diff + def.qb.grade*score.diff, data = data.win.train[data.win.train$TimeSecs > 600,])
 summary(sigma)

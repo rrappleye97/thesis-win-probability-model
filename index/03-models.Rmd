@@ -6,7 +6,8 @@ Instead of predicting win probability from any game state with one full-stop mod
 **Model when more than ten minutes remain:**  
 On kickoffs a win probability is modeled using a variation of the trick PFR uses to implement a normal distribution when deriving win probability. For a given game state $i$ we have:  
 
-$\Delta score_i \sim \mathcal{N}(\hat{\mu}_i,\hat{\sigma}^{2}_i),$where $\\ \\ \begin{aligned} \hat{\mu}_i = &\beta_{int} + \beta_\rho\rho_i + \beta_{pos_o}{pos_o}_i + \beta_{de\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{s_{curr}}s_{curr_i}+ \beta_kk_i + \\ &\beta_{kpos_o}k_ipos_{o_i} + \beta_{k{de\hspace{-0.1em}f_o}}k_i{de\hspace{-0.1em}f_{o_i}} + \beta_{s_{curr}pos_o}s_{curr_i}pos_{o_i} + \beta_{s_{curr}{de\hspace{-0.1em}f_o}}s_{curr_i}{de\hspace{-0.1em}f_{o_i}} \\ \\ \end{aligned}$ and $\\ \\ \begin{aligned}\hat{\sigma}_i = &\beta_{int} + \beta_{pos_o}{pos_o}_i + \beta_{de\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{pos_d}{pos_d}_i + \beta_{de\hspace{-0.1em}f_d}{de\hspace{-0.1em}f_d}_i  + \beta_{s_{curr}}s_{curr_i} + \beta_{s_{curr_{abs}}}\mid\hspace{-0.2em}{s_{curr_i}}\hspace{-0.2em}\mid + \\ &\beta_tt_i  +   \beta_{ts}\sqrt{t_i} + \beta_{pos_{qb}}{pos_{qb}}_i + \beta_{de\hspace{-0.1em}f_{qb}}{de\hspace{-0.1em}f_{qb}}_i + \beta_{pos_{qb}s}{pos_{qb}}_is_i + \beta_{de\hspace{-0.1em}f_{qb}s}{de\hspace{-0.1em}f_{qb}}_is_i \end{aligned}$
+$\Delta score_i \sim \mathcal{N}(\hat{\mu}_i,\hat{\sigma}^{2}_i),$where $\\ \\ \begin{aligned} \hat{\mu}_i = &\beta_{int} + \beta_\rho\rho_i + \beta_{pos_o}{pos_o}_i + \beta_{de\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{s_{curr}}s_{curr_i}+ \beta_kk_i + \\ &\beta_{kpos_o}k_ipos_{o_i} + \beta_{k{de\hspace{-0.1em}f_o}}k_i{de\hspace{-0.1em}f_{o_i}} + \beta_{s_{curr}pos_o}s_{curr_i}pos_{o_i} + \beta_{s_{curr}{de\hspace{-0.1em}f_o}}s_{curr_i}{de\hspace{-0.1em}f_{o_i}}\end{aligned}$ and
+$\\ \begin{aligned}\hat{\sigma}_i = &\beta_{int} + \beta_{pos_o}{pos_o}_i + \beta_{de\hspace{-0.1em}f_o}{de\hspace{-0.1em}f_o}_i + \beta_{pos_d}{pos_d}_i + \beta_{de\hspace{-0.1em}f_d}{de\hspace{-0.1em}f_d}_i  + \beta_{s_{curr}}s_{curr_i} + \beta_{s_{curr_{abs}}}\mid\hspace{-0.2em}{s_{curr_i}}\hspace{-0.2em}\mid + \\ &\beta_tt_i  +   \beta_{ts}\sqrt{t_i} + \beta_{pos_{qb}}{pos_{qb}}_i + \beta_{de\hspace{-0.1em}f_{qb}}{de\hspace{-0.1em}f_{qb}}_i + \beta_{pos_{qb}s}{pos_{qb}}_is_i + \beta_{de\hspace{-0.1em}f_{qb}s}{de\hspace{-0.1em}f_{qb}}_is_i \end{aligned}$
 
 Where we define:  
 $int =$ Intercept,  
@@ -27,7 +28,7 @@ By making the observation that the final score differential is simply $s_{curr} 
 <center>
 
 $s_{final_i} \sim \mathcal{N}(\hat{\mu}_i + s_{curr_i},\,\hat{\sigma}_i^{2})$ and therefore:
-$WinProb_i = P(s_{final_i} > 0) = CDF^{-1}(\frac{\hat{\mu}_i + s_{curr_i}}{\hat{\sigma}^{2}_i})$
+$WinProb_i = P(s_{final_i} > 0) = CDF^{-1}(\frac{\hat{\mu}_i + s_{curr_i}}{\hat{\sigma}_i})$
 
 </center>
 
@@ -41,7 +42,7 @@ Predictors for $\sigma$ were also chosen using LMRSO CV. The linear model used f
 We also tested a Generalized Linear Mixed Model (GLMM) fit using the “lme4” package and a Generalized Boosted Model (GBM) fitted using Greg Ridgeway’s “gbm” package, used to extend Jerome Friedman’s Gradient Boosted Machine (2001 & 2002). The above model outperforms both the GLMM and the GBM.
 
 **Model when ten or fewer minutes remain**  
-The assumption that $\Delta score$ is normally distributed begins to break down some time around the ten minute mark of the fourth quarter. Since it is no longer valid to model $\Delta score$ with a normal distribution, win probability is instead modeled using a GBM that is fit with the following terms.  
+The assumption that $\Delta score$ is normally distributed begins to break down some time around the ten minute mark of the fourth quarter^[$\Delta score$ follows the normal distribution longer than we found raw change in score differential to follow the normal distribution. This is likely because of the addition of a model for $\hat{\mu}$ instead of using a mean of 0.]. Since it is no longer valid to model $\Delta score$ with a normal distribution, win probability is instead modeled using a GBM that is fit with the following terms.  
 
 ```{r win-prob-vars, results="asis", echo=FALSE, cache = TRUE}
 win.prob.4th.vars = c("Scaled Point Spread", "Current Score Differential", "Square Root of Adjusted Time Left in the Half", "Offensive DVOA for the Offensive Team", "Offensive DVOA for the Defensive Team", "Defensive DVOA for the Offensive Team", "Defensive DVOA for the Defensive Team", "Projected QB grade for the Offensive Team", "Projected QB grade for the Offensive Team", "Timeouts left for the Offense", "Timeouts left for the Defense")

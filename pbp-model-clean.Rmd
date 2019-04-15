@@ -1020,12 +1020,10 @@ mse = mean(abs((pred - data.win.test$score.change[data.win.test$TimeSecs > 600])
 
 #make model for std dev...try adding coaches variable to mixed lm 
 data.win.train$deviation.from.mu = rep(NA, nrow(data.win.train))
-data.win.train$deviation.from.mu[data.win.train$TimeSecs > 600] = 
-  data.win.train$score.change[data.win.train$TimeSecs > 600]  + predict(mu, data.win.train[data.win.train$TimeSecs > 600,])
+data.win.train$deviation.from.mu = data.win.train$score.change - predict(mu, data.win.train)
 
 data.win.test$deviation.from.mu = rep(NA, nrow(data.win.test))
-data.win.test$deviation.from.mu[data.win.test$TimeSecs > 600] = 
-  data.win.test$score.change[data.win.test$TimeSecs > 600]  + predict(mu, data.win.test[data.win.test$TimeSecs > 600,])
+data.win.test$deviation.from.mu = data.win.test$score.change - predict(mu, data.win.test)
 
 cols = which(colnames(data.win.train) %in% c("TimeSecs", "score.change.squared", 'score.diff', "pos.o.dvoa", 
   "pos.d.dvoa", "def.o.dvoa", "def.d.dvoa", "deviation.from.mu", "pos.qb.grade", "def.qb.grade", "pos.receive.2nd.half.kickoff", "TimeSecs.half.to", "ot.kickoff", "pos.win", "pos.line.scaled", "score.change"))
@@ -1092,3 +1090,40 @@ loss = mean(ifelse(data.win.test$pos.win[data.win.test$TimeSecs <= 0] == 1,log(p
 mse = mean(ifelse(data.win.test$pos.win[data.win.test$TimeSecs <= 0] == 0, pred.win^2, (1-pred.win)^2))
 ```
 
+
+```{r normality-mu-eda, results="asis", echo=FALSE, cache = TRUE}
+time.indices.q4 = which(data.win.train$TimeSecs > 600 & data.win.train$TimeSecs <= 900)
+time.indices.q3 = which(data.win.train$TimeSecs > 1500 & data.win.train$TimeSecs <= 1800)
+time.indices.q2 = which(data.win.train$TimeSecs > 2400 & data.win.train$TimeSecs <= 2700)
+time.indices.q1 = which(data.win.train$TimeSecs > 3300 & data.win.train$TimeSecs <= 3600)
+
+time.indices.q4.2 = which(data.win.train$TimeSecs > 300 & data.win.train$TimeSecs <= 600)
+
+gridExtra::grid.arrange(
+  ggplot() +
+    geom_density(aes(x = data.win.train$deviation.from.mu[time.indices.q1]), color = "steelblue", na.rm = T) +
+    labs(x = "Deviation from Mu", title = "Deviation from Mu", subtitle = "First five minutes of first quarter"),
+  ggplot() +
+    geom_density(aes(x = data.win.train$deviation.from.mu[time.indices.q2]), color = "darkorange", na.rm = T) +
+    labs(x = "Deviation from Mu", title = "Deviation from Mu", subtitle = "First five minutes of second quarter"),
+  ggplot() +
+    geom_density(aes(x = data.win.train$deviation.from.mu[time.indices.q3]), color = "darkred", na.rm = T) +
+    labs(x = "Deviation from Mu", title = "Deviation from Mu", subtitle = "First five minutes of third quarter"),
+  ggplot() +
+    geom_density(aes(x = data.win.train$deviation.from.mu[time.indices.q4]), color = "darkgreen", na.rm = T) +
+    labs(x = "Deviation from Mu", title = "Deviation from Mu", subtitle = "First five minutes of fourth quarter"),
+  ncol = 2)
+
+gridExtra::grid.arrange(
+  qqnorm(data.win.train$deviation.from.mu[time.indices.q1]), 
+  qqnorm(data.win.train$deviation.from.mu[time.indices.q2]),
+  qqnorm(data.win.train$deviation.from.mu[time.indices.q3]),
+  qqnorm(data.win.train$deviation.from.mu[time.indices.q4]),
+  ncol = 2)
+
+ggplot() +
+    geom_density(aes(x = data.win.train$deviation.from.mu[time.indices.q4.2]), color = "darkgreen", na.rm = T) +
+    labs(x = "Deviation from Mu", title = "Deviation from Mu", subtitle = "5:00 to 10:00 remaining in fourth quarter")
+
+
+```
