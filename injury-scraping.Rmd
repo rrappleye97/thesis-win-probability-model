@@ -1,0 +1,40 @@
+---
+title: "scraping-injury-report"
+output: html_document
+---
+
+```{r}
+library(rvest)
+teams = c("phi", "dal", "nyg", "was", "tam", "atl", "car", "nor", "det", "gnb", "min", "chi", "sea", "sfo", "ari", "ram", "htx", "jax", "ind", "ten", "pit", "bal", "cle", "cin", "nwe", "mia", "nyj", "buf", "kan", "den", "sdg")
+
+games.2018 = rep(17, 32)
+games.2018[which(teams %in% c("chi", "bal", "htx", "sea"))] = 17
+games.2018[which(teams %in% c("phi", "nor", "ind", "kan", "dal", "sdg"))] = 18
+games.2018[which(teams %in% c("nwe", "ram"))] = 19
+
+teams.old = teams
+teams.old[which(teams.old == "ram")]= "stl"
+
+team.injuries.2018 = as.list(c(1:32))
+
+pages = as.list(c(1:32))
+for(i in c(1:32)){
+  pages[[i]] = read_html(paste0("https://www.pro-football-reference.com/teams/", teams[i], "/2018_injuries.htm"))
+}
+
+page = pages[[2]]
+test = page %>% html_nodes(".left , #team_injuries .center") %>% as.character()
+test = test[1:(length(test)-1)]
+
+player.indices = seq(20, (length(test)), by = games.2018[2]+1)
+test[player.indices] = as.character(test[player.indices])
+test[player.indices] = str_extract(test[player.indices], ">[A-Z].+[a-zA-Z]<") %>% 
+  str_replace_all("<|>", "")
+week.indices = c(1:games.2018[2])+1
+test[week.indices] = str_extract(test[week.indices], "week_[0-9]+") %>% str_replace("_", " ")
+other.indices = (c(1:length(test)))[-c(player.indices, week.indices)]
+test[other.indices] = str_extract(test[other.indices], ">[A-Za-z]+<") %>% str_replace_all("<|>", "")
+
+test = matrix(test, ncol = games.2018[2]+1) %>% as.data.frame()
+```
+

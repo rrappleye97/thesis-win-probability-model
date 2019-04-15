@@ -109,7 +109,7 @@ ggplot() +
   labs(x = "Yards from End Zone", y = "Probability of Being Next Scoring Event", title = "P(Next Scoring Event) vs. Yard Line", subtitle = "2010 to 2015 NFL data")
 ```
 
-Finally, we'll take a look at how the probability of different outcomes on a given set of downs changes with the yards to go. We'll output graphs for both first and second down.
+Finally, we'll take a look at how the probability of different outcomes on a given set of downs changes with the yards to go. We'll output graphs for both second and third down.
 
 ```{r downs-plays, results="asis", echo=FALSE, cache = TRUE}
 data = readRDS(file = "/home/guest/thesis-sp19-rappleye-nfl_calculator/cleaned-data-part-4.Rda")
