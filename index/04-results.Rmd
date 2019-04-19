@@ -93,17 +93,17 @@ my.calibration.plot = ggplot() +
   geom_line(aes(x = my.mean.prob, y = my.bucket.win.prob, color = "Model Calibration")) + 
   geom_line(aes(x = seq(0, 1, by = 0.05), y = seq(0, 1, by = 0.05), color = "Perfect Calibration")) +
   geom_point(aes(x = my.mean.prob, y = my.bucket.win.prob, color = "Model Calibration", size = my.size)) + 
-  labs(title = "Actual vs. Predicted Win Probability for Our Model", x = "Actual Win Probability", y = "Predicted Win Probability", size = "Size")
+  labs(title = "Actual vs. Predicted Win Probability for Our Model", x = "Predicted Win Probability", y = "Actual Win Probability", size = "Size")
 lock.calibration.plot = ggplot() +
   geom_line(aes(x = lock.mean.prob, y = lock.bucket.win.prob, color = "Model Calibration")) + 
   geom_line(aes(x = seq(0, 1, by = 0.05), y = seq(0, 1, by = 0.05), color = "Perfect Calibration")) +
   geom_point(aes(x = lock.mean.prob, y = lock.bucket.win.prob, color = "Model Calibration", size = lock.size)) + 
-  labs(title = "Actual vs. Predicted Win Probability for Lock and Nettleton's Model", x = "Actual Win Probability", y = "Predicted Win Probability", size = "Size")
+  labs(title = "Actual vs. Predicted Win Probability for Lock and Nettleton's Model", x = "Predicted Win Probability", y = "Actual Win Probability", size = "Size")
 scrapr.calibration.plot = ggplot() +
   geom_line(aes(x = scrapr.mean.prob, y = scrapr.bucket.win.prob, color = "Model Calibration")) + 
   geom_line(aes(x = seq(0, 1, by = 0.05), y = seq(0, 1, by = 0.05), color = "Perfect Calibration")) +
   geom_point(aes(x = scrapr.mean.prob, y = scrapr.bucket.win.prob, color = "Model Calibration", size = scrapr.size)) + 
-  labs(title = "Actual vs. Predicted Win Probability for the nflscrapR model", x = "Actual Win Probability", y = "Predicted Win Probability", size = "Size")
+  labs(title = "Actual vs. Predicted Win Probability for the nflscrapR model", x = "Predicted Win Probability", y = "Actual Win Probability", size = "Size")
 
 my.calibration.plot 
 scrapr.calibration.plot
